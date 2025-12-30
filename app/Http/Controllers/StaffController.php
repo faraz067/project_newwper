@@ -38,4 +38,22 @@ class StaffController extends Controller
 
         return redirect()->back()->with('success', 'Status booking berhasil diperbarui!');
     }
+
+    // Fungsi untuk Input Denda / Biaya Tambahan
+    public function addCharge(Request $request, $id)
+    {
+        $booking = Booking::findOrFail($id);
+
+        $request->validate([
+            'extra_charge' => 'required|numeric|min:0',
+            'note' => 'nullable|string'
+        ]);
+
+        $booking->update([
+            'extra_charge' => $request->extra_charge,
+            'note' => $request->note
+        ]);
+
+        return redirect()->back()->with('success', 'Biaya tambahan berhasil disimpan!');
+    }
 }

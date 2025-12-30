@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\StaffController;
-use App\Http\Controllers\AuthController; // <--- JANGAN LUPA INI DI ATAS
+use App\Http\Controllers\AuthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -12,20 +12,30 @@ use App\Http\Controllers\AuthController; // <--- JANGAN LUPA INI DI ATAS
 |--------------------------------------------------------------------------
 */
 
+// Halaman Depan
 Route::get('/', function () {
     return view('welcome');
 });
 
 // ====================================================
-//  👇 LOGIN ROUTE
+// GROUP 1: AUTHENTICATION (Login, Register, Logout)
 // ====================================================
-Route::get('/login', function () {
-    return view('login');
-})->name('login');
+Route::middleware('guest')->group(function () {
+    // Login
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'processLogin']);
+
+    // Register
+    Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
+    Route::post('/register', [AuthController::class, 'processRegister']);
+});
+
+// Logout (Hanya bisa diakses kalau sudah login)
+Route::get('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
 
 // ====================================================
-// GROUP 1: Route untuk USER (Penyewa) - Wajib Login
+// GROUP 2: Route untuk USER (Penyewa) - Wajib Login
 // ====================================================
 Route::middleware(['auth'])->group(function () {
     
@@ -38,12 +48,13 @@ Route::middleware(['auth'])->group(function () {
     // Halaman Riwayat Booking
     Route::get('/riwayat', [BookingController::class, 'history'])->name('booking.history');
 
-    // 👇 TAMBAHAN BARU: Route untuk Upload Bukti Bayar
+    // Route untuk Upload Bukti Bayar
     Route::post('/booking/{id}/upload', [BookingController::class, 'uploadProof'])->name('booking.upload');
 });
 
+
 // ====================================================
-// GROUP 2: Route khusus STAFF (Operator) - Wajib Login & Role Staff
+// GROUP 3: Route khusus STAFF (Operator) - Wajib Login & Role Staff
 // ====================================================
 Route::middleware(['auth', 'is_staff'])->prefix('staff')->group(function () {
     
@@ -52,39 +63,30 @@ Route::middleware(['auth', 'is_staff'])->prefix('staff')->group(function () {
     
     // Proses Update Status (Terima / Tolak / Selesai)
     Route::post('/booking/{id}/update', [StaffController::class, 'updateStatus'])->name('staff.booking.update');
+
+    // 👇 TAMBAHAN BARU: Input Denda / Biaya Tambahan
+    Route::post('/booking/{id}/charge', [StaffController::class, 'addCharge'])->name('staff.booking.charge');
 });
 
+
 // ====================================================
-// GROUP 3: JALAN TIKUS (SHORTCUT UNTUK TESTING)
+// GROUP 4: JALAN TIKUS (SHORTCUT UNTUK TESTING)
 // ====================================================
 
 // 1. Link Login Otomatis jadi STAFF
 Route::get('/test-login-staff', function () {
-    Auth::loginUsingId(1); // ID 1 = Staff
-    return redirect()->route('staff.dashboard');
+    // Pastikan User ID 1 ada di database dan role-nya 'staff'
+    if (Auth::loginUsingId(1)) {
+        return redirect()->route('staff.dashboard');
+    }
+    return "User ID 1 tidak ditemukan!";
 });
 
 // 2. Link Login Otomatis jadi USER
 Route::get('/test-login-user', function () {
-    Auth::loginUsingId(2); // ID 2 = User Biasa
-    return redirect()->route('booking.create');
+    // Pastikan User ID 2 ada di database
+    if (Auth::loginUsingId(2)) {
+        return redirect()->route('booking.create');
+    }
+    return "User ID 2 tidak ditemukan!";
 });
-
-// 3. Link Logout
-Route::get('/logout', function () {
-    Auth::logout();
-    return redirect('/');
-
-
-});
-
-// Login
-Route::get('/login', [AuthController::class, 'showLogin'])->name('login')->middleware('guest');
-Route::post('/login', [AuthController::class, 'processLogin']);
-
-// Register
-Route::get('/register', [AuthController::class, 'showRegister'])->name('register')->middleware('guest');
-Route::post('/register', [AuthController::class, 'processRegister']);
-
-// Logout
-Route::get('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');

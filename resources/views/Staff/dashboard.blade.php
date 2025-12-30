@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+\<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard Admin - GOR Booking</title>
+    <title>Dashboard Staff - GOR Booking</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -15,7 +15,7 @@
 
 <nav class="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
     <div class="container">
-        <a class="navbar-brand fw-bold" href="#"><i class="fas fa-user-shield me-2"></i>Admin Panel</a>
+        <a class="navbar-brand fw-bold" href="#"><i class="fas fa-user-shield me-2"></i>Staff Panel</a>
         <div class="d-flex">
             <span class="navbar-text text-white me-3">Halo, Staff</span>
             <a href="/logout" class="btn btn-outline-danger btn-sm">Logout</a>
@@ -29,6 +29,12 @@
         <div class="alert alert-success alert-dismissible fade show" role="alert">
             {{ session('success') }}
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+    
+    @if($errors->any())
+        <div class="alert alert-danger">
+            Periksa input denda/catatan Anda. Pastikan nominal berupa angka.
         </div>
     @endif
 
@@ -51,6 +57,7 @@
                                 <th>Lapangan</th>
                                 <th>Penyewa</th>
                                 <th>Status</th>
+                                <th>Biaya Tambahan</th>
                                 <th>Aksi</th>
                             </tr>
                         </thead>
@@ -64,27 +71,73 @@
                                 <td class="align-middle">{{ $booking->user->name }}</td>
                                 <td class="align-middle">
                                     @if($booking->status == 'confirmed')
-                                        <span class="badge bg-primary">Siap Main</span>
+                                        <span class="badge bg-primary">Sedang Main / Siap</span>
                                     @elseif($booking->status == 'completed')
                                         <span class="badge bg-success">Selesai</span>
                                     @else
-                                        <span class="badge bg-warning text-dark">{{ $booking->status }}</span>
+                                        <span class="badge bg-secondary">{{ $booking->status }}</span>
                                     @endif
                                 </td>
+                                
                                 <td class="align-middle">
-                                    @if($booking->status == 'confirmed')
-                                    <form action="{{ route('staff.booking.update', $booking->id) }}" method="POST">
-                                        @csrf
-                                        <button name="status" value="completed" class="btn btn-success btn-sm" onclick="return confirm('Selesaikan sesi ini?')">
-                                            ✅ Selesai Main
-                                        </button>
-                                    </form>
+                                    @if($booking->extra_charge > 0)
+                                        <span class="text-danger fw-bold">+ Rp {{ number_format($booking->extra_charge, 0, ',', '.') }}</span>
+                                        <br><small class="text-muted fst-italic">"{{ $booking->note }}"</small>
+                                    @else
+                                        <span class="text-muted small">-</span>
                                     @endif
+                                </td>
+
+                                <td class="align-middle">
+                                    <div class="d-flex gap-1">
+                                        
+                                        @if($booking->status == 'confirmed')
+                                        <form action="{{ route('staff.booking.update', $booking->id) }}" method="POST">
+                                            @csrf
+                                            <button name="status" value="completed" class="btn btn-success btn-sm" onclick="return confirm('Selesaikan sesi ini?')">
+                                                ✅ Selesai
+                                            </button>
+                                        </form>
+                                        @endif
+
+                                        @if($booking->status == 'confirmed' || $booking->status == 'completed')
+                                            <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#chargeModalToday{{ $booking->id }}" title="Input Biaya">
+                                                <i class="fas fa-coins"></i>
+                                            </button>
+
+                                            <div class="modal fade" id="chargeModalToday{{ $booking->id }}" tabindex="-1">
+                                                <div class="modal-dialog">
+                                                    <div class="modal-content">
+                                                        <div class="modal-header bg-warning">
+                                                            <h5 class="modal-title">Biaya Tambahan ({{ $booking->user->name }})</h5>
+                                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                        </div>
+                                                        <form action="{{ route('staff.booking.charge', $booking->id) }}" method="POST">
+                                                            @csrf
+                                                            <div class="modal-body text-start">
+                                                                <div class="mb-3">
+                                                                    <label>Nominal (Rp)</label>
+                                                                    <input type="number" name="extra_charge" class="form-control" value="{{ $booking->extra_charge }}" placeholder="0">
+                                                                </div>
+                                                                <div class="mb-3">
+                                                                    <label>Catatan</label>
+                                                                    <textarea name="note" class="form-control" placeholder="Contoh: Beli Air / Overtime">{{ $booking->note }}</textarea>
+                                                                </div>
+                                                            </div>
+                                                            <div class="modal-footer">
+                                                                <button type="submit" class="btn btn-primary">Simpan</button>
+                                                            </div>
+                                                        </form>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            @endif
+                                    </div>
                                 </td>
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="5" class="text-center py-4 text-muted">
+                                <td colspan="6" class="text-center py-4 text-muted">
                                     Tidak ada jadwal main untuk hari ini.
                                 </td>
                             </tr>
@@ -109,17 +162,25 @@
                                     <th>Penyewa</th>
                                     <th>Lapangan</th>
                                     <th>Status</th>
-                                    <th>Aksi Konfirmasi</th> </tr>
+                                    <th>Aksi / Kelola</th>
+                                </tr>
                             </thead>
                             <tbody>
                                 @foreach($allBookings as $booking)
                                 <tr>
-                                    <td>{{ $booking->start_time->format('d M Y, H:i') }}</td>
+                                    <td>
+                                        {{ $booking->start_time->format('d M Y, H:i') }}
+                                        @if($booking->extra_charge > 0)
+                                            <div class="text-danger small fw-bold mt-1">
+                                                + Charge: Rp {{ number_format($booking->extra_charge, 0, ',', '.') }}
+                                            </div>
+                                        @endif
+                                    </td>
                                     <td>{{ $booking->user->name }}</td>
                                     <td>{{ $booking->court->name }}</td>
                                     <td>
                                         @if($booking->status == 'pending')
-                                            <span class="badge bg-warning text-dark">Menunggu Konfirmasi</span>
+                                            <span class="badge bg-warning text-dark">Perlu Konfirmasi</span>
                                         @elseif($booking->status == 'confirmed')
                                             <span class="badge bg-primary">Diterima</span>
                                         @elseif($booking->status == 'completed')
@@ -129,44 +190,66 @@
                                         @endif
                                     </td>
                                     <td>
-                                        @if($booking->status == 'pending')
-                                            <div class="d-flex gap-2">
-                                                
+                                        <div class="d-flex gap-2">
+                                            @if($booking->status == 'pending')
                                                 @if($booking->payment_proof)
-                                                    <a href="{{ asset('storage/' . $booking->payment_proof) }}" target="_blank" class="btn btn-info btn-sm text-white" title="Lihat Bukti Bayar">
-                                                        <i class="fas fa-image"></i> Bukti
+                                                    <a href="{{ asset('storage/' . $booking->payment_proof) }}" target="_blank" class="btn btn-info btn-sm text-white" title="Lihat Bukti">
+                                                        <i class="fas fa-image"></i>
                                                     </a>
                                                 @else
-                                                    <button class="btn btn-secondary btn-sm" disabled title="User belum upload bukti">
-                                                        Belum Bayar
-                                                    </button>
+                                                    <button class="btn btn-secondary btn-sm" disabled><i class="fas fa-image"></i></button>
                                                 @endif
 
                                                 <form action="{{ route('staff.booking.update', $booking->id) }}" method="POST">
                                                     @csrf
-                                                    <button name="status" value="confirmed" class="btn btn-primary btn-sm" onclick="return confirm('Terima booking ini?')">
-                                                        <i class="fas fa-check"></i> Terima
+                                                    <button name="status" value="confirmed" class="btn btn-primary btn-sm" title="Terima">
+                                                        <i class="fas fa-check"></i>
                                                     </button>
                                                 </form>
 
                                                 <form action="{{ route('staff.booking.update', $booking->id) }}" method="POST">
                                                     @csrf
-                                                    <button name="status" value="rejected" class="btn btn-danger btn-sm" onclick="return confirm('Tolak booking ini?')">
-                                                        <i class="fas fa-times"></i> Tolak
+                                                    <button name="status" value="rejected" class="btn btn-danger btn-sm" title="Tolak">
+                                                        <i class="fas fa-times"></i>
                                                     </button>
                                                 </form>
-                                            </div>
-                                        @else
-                                            <span class="text-muted small">
-                                                @if($booking->status == 'confirmed')
-                                                    Sudah Disetujui
-                                                @elseif($booking->status == 'rejected')
-                                                    Ditolak
+
+                                            @elseif($booking->status == 'confirmed' || $booking->status == 'completed')
+                                                
+                                                <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#chargeModalHistory{{ $booking->id }}">
+                                                    <i class="fas fa-coins"></i> Input Biaya
+                                                </button>
+                                                
+                                                <div class="modal fade" id="chargeModalHistory{{ $booking->id }}" tabindex="-1">
+                                                    <div class="modal-dialog">
+                                                        <div class="modal-content">
+                                                            <div class="modal-header bg-warning">
+                                                                <h5 class="modal-title">Biaya Tambahan (#{{ $booking->id }})</h5>
+                                                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                                            </div>
+                                                            <form action="{{ route('staff.booking.charge', $booking->id) }}" method="POST">
+                                                                @csrf
+                                                                <div class="modal-body text-start">
+                                                                    <div class="mb-3">
+                                                                        <label>Nominal (Rp)</label>
+                                                                        <input type="number" name="extra_charge" class="form-control" value="{{ $booking->extra_charge }}" placeholder="0">
+                                                                    </div>
+                                                                    <div class="mb-3">
+                                                                        <label>Catatan</label>
+                                                                        <textarea name="note" class="form-control" placeholder="Contoh: Beli Minum">{{ $booking->note }}</textarea>
+                                                                    </div>
+                                                                </div>
+                                                                <div class="modal-footer">
+                                                                    <button type="submit" class="btn btn-primary">Simpan</button>
+                                                                </div>
+                                                            </form>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                                 @else
-                                                    -
-                                                @endif
-                                            </span>
-                                        @endif
+                                                <span class="text-muted">-</span>
+                                            @endif
+                                        </div>
                                     </td>
                                 </tr>
                                 @endforeach
@@ -182,6 +265,8 @@
 <footer class="text-center py-4 text-muted mt-5 border-top">
     <small>&copy; 2025 Sistem Booking GOR</small>
 </footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
 </body>
 </html>
