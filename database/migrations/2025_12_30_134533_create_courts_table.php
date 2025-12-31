@@ -10,11 +10,8 @@ return new class extends Migration
     {
         Schema::create('courts', function (Blueprint $table) {
             $table->id();
-            $table->string('name');                 // nama lapangan
-            $table->string('type');                 // jenis (futsal, badminton, dll)
-            $table->integer('price_per_hour');
-            $table->enum('status', ['tersedia', 'maintenance'])->default('tersedia');
-            $table->string('photo')->nullable();
+            $table->string('name');
+            $table->integer('price'); // sesuai dengan model Court terbaru
             $table->timestamps();
         });
     }

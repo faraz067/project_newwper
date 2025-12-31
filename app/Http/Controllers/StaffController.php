@@ -3,8 +3,8 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use App\Models\Booking; // <--- Kita butuh model Booking
-use Carbon\Carbon;      // <--- Kita butuh ini untuk urus tanggal
+use App\Models\Booking; 
+use Carbon\Carbon;      
 
 class StaffController extends Controller
 {
@@ -13,7 +13,7 @@ class StaffController extends Controller
     {
         // 1. Ambil data booking KHUSUS HARI INI
         $todaysBookings = Booking::whereDate('start_time', Carbon::today())
-                            ->with(['user', 'court']) // Ambil data user & lapangan biar gak error
+                            ->with(['user', 'court']) 
                             ->orderBy('start_time', 'asc')
                             ->get();
 
@@ -22,16 +22,14 @@ class StaffController extends Controller
                         ->orderBy('created_at', 'desc')
                         ->get();
 
-        // Kirim dua variabel ini ke View
         return view('staff.dashboard', compact('todaysBookings', 'allBookings'));
     }
 
-    // Proses Update Status (Saat tombol Selesai/Terima ditekan)
+    // Proses Update Status (Selesai/Terima/Tolak)
     public function updateStatus(Request $request, $id)
     {
         $booking = Booking::findOrFail($id);
         
-        // Update status sesuai request dari tombol
         if ($request->has('status')) {
             $booking->update(['status' => $request->status]);
         }
@@ -39,21 +37,30 @@ class StaffController extends Controller
         return redirect()->back()->with('success', 'Status booking berhasil diperbarui!');
     }
 
-    // Fungsi untuk Input Denda / Biaya Tambahan
+    // ============================================================
+    // FIX: Fungsi Input Denda (Menangani Masalah Titik/Rp 100)
+    // ============================================================
     public function addCharge(Request $request, $id)
     {
         $booking = Booking::findOrFail($id);
 
-        $request->validate([
-            'extra_charge' => 'required|numeric|min:0',
-            'note' => 'nullable|string'
-        ]);
+        // Ambil data input denda
+        $inputCharge = $request->extra_charge;
+
+        // PROTEKSI: Hapus semua karakter selain angka (titik, koma, Rp)
+        // Jika input "100.000", hasilnya jadi "100000"
+        $cleanAmount = preg_replace('/[^0-9]/', '', $inputCharge);
+
+        // Validasi setelah dibersihkan
+        if (!is_numeric($cleanAmount) && !empty($inputCharge)) {
+            return redirect()->back()->withErrors(['extra_charge' => 'Format denda harus berupa angka.']);
+        }
 
         $booking->update([
-            'extra_charge' => $request->extra_charge,
+            'extra_charge' => (int) $cleanAmount,
             'note' => $request->note
         ]);
 
-        return redirect()->back()->with('success', 'Biaya tambahan berhasil disimpan!');
+        return redirect()->back()->with('success', 'Biaya tambahan Rp ' . number_format($cleanAmount, 0, ',', '.') . ' berhasil disimpan!');
     }
 }

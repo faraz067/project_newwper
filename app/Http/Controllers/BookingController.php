@@ -11,20 +11,17 @@ use Carbon\Carbon;
 class BookingController extends Controller
 {
     // ============================================================
-    // 1. HALAMAN FORM BOOKING (Dengan Fitur Cek Jadwal Visual)
+    // 1. HALAMAN FORM BOOKING
     // ============================================================
     public function create(Request $request)
     {
-        // Ambil tanggal dari pilihan user (kalau kosong, pakai hari ini)
         $date = $request->input('date', date('Y-m-d'));
-
-        // Ambil semua data lapangan
         $courts = Court::all();
 
-        // Ambil booking yang SUDAH ADA di tanggal tersebut (untuk ditampilkan di list kanan)
+        // Ambil booking yang SUDAH ADA (tampilan list kanan)
         $existingBookings = Booking::whereDate('start_time', $date)
-            ->where('status', '!=', 'rejected') // Hiraukan yang ditolak
-            ->with('court') // Ambil data lapangan juga
+            ->where('status', '!=', 'rejected') 
+            ->with(['court', 'user']) // Tambahkan user agar nama penyewa muncul
             ->orderBy('start_time')
             ->get();
 
@@ -32,57 +29,55 @@ class BookingController extends Controller
     }
 
     // ============================================================
-    // 2. PROSES SIMPAN BOOKING (Fix: Baris Duration Dihapus)
+    // 2. PROSES SIMPAN BOOKING (Fix Harga Rp 0)
     // ============================================================
     public function store(Request $request)
     {
-        // A. Validasi Input
         $request->validate([
             'court_id' => 'required|exists:courts,id',
             'date' => 'required|date|after_or_equal:today',
             'start_time' => 'required',
-            'end_time' => 'required|after:start_time', // Jam selesai wajib setelah jam mulai
+            'end_time' => 'required|after:start_time',
         ]);
 
-        // B. Gabungkan Tanggal & Jam untuk perhitungan
         $start = Carbon::parse($request->date . ' ' . $request->start_time);
         $end = Carbon::parse($request->date . ' ' . $request->end_time);
 
-        // C. Hitung Durasi & Harga
-        $durationMinutes = $end->diffInMinutes($start);
-        $durationHours = $durationMinutes / 60; // Konversi ke jam
+        // A. HITUNG DURASI
+        $durationInMinutes = $end->diffInMinutes($start);
+        $durationInHours = $durationInMinutes / 60;
 
-        $court = Court::find($request->court_id);
-        $totalPrice = $court->price_per_hour * $durationHours;
+        // B. AMBIL DATA LAPANGAN & HITUNG HARGA
+        $court = Court::findOrFail($request->court_id);
+        
+        // FIX: Menggunakan $court->price (BUKAN price_per_hour)
+        $totalPrice = $court->price * $durationInHours;
 
-        // D. Cek Bentrok Jadwal (Anti Double Booking)
+        // C. CEK BENTROK JADWAL
         $bentrok = Booking::where('court_id', $request->court_id)
             ->whereDate('start_time', $request->date)
             ->where('status', '!=', 'rejected')
             ->where(function ($query) use ($start, $end) {
-                $query->whereBetween('start_time', [$start, $end])
-                      ->orWhereBetween('end_time', [$start, $end])
-                      ->orWhere(function ($q) use ($start, $end) {
-                          $q->where('start_time', '<', $start)
-                            ->where('end_time', '>', $end);
-                      });
+                $query->where(function ($q) use ($start, $end) {
+                    $q->where('start_time', '<', $end)
+                      ->where('end_time', '>', $start);
+                });
             })
             ->exists();
 
         if ($bentrok) {
             return back()
-                ->withErrors(['msg' => 'Maaf, jam tersebut sudah terisi! Silakan lihat daftar jadwal di sebelah kanan.'])
+                ->withErrors(['msg' => 'Maaf, jam tersebut sudah terisi! Silakan pilih jam lain.'])
                 ->withInput();
         }
 
-        // E. Simpan ke Database
+        // D. SIMPAN KE DATABASE
         Booking::create([
             'user_id' => Auth::id(),
             'court_id' => $request->court_id,
             'start_time' => $start,
             'end_time' => $end,
-            // 'duration' => $durationMinutes,  <-- SAYA MATIKAN BARIS INI AGAR TIDAK ERROR
-            'total_price' => $totalPrice,
+            'total_price' => $totalPrice, // Sekarang nilainya benar (tidak 0)
             'status' => 'pending',
         ]);
 
@@ -107,23 +102,17 @@ class BookingController extends Controller
     // ============================================================
     public function uploadProof(Request $request, $id)
     {
-        $booking = Booking::findOrFail($id);
+        $booking = Booking::where('id', $id)->where('user_id', Auth::id())->firstOrFail();
 
-        // Validasi Gambar
         $request->validate([
             'payment_proof' => 'required|image|mimes:jpeg,png,jpg|max:2048',
         ]);
 
-        // Proses Upload
         if ($request->hasFile('payment_proof')) {
             $path = $request->file('payment_proof')->store('payment_proofs', 'public');
-            
-            // Update Database
-            $booking->update([
-                'payment_proof' => $path
-            ]);
+            $booking->update(['payment_proof' => $path]);
         }
 
-        return redirect()->back()->with('success', 'Bukti pembayaran berhasil diupload! Tunggu konfirmasi Admin.');
+        return redirect()->back()->with('success', 'Bukti berhasil diupload!');
     }
 }
