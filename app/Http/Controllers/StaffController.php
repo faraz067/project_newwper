@@ -8,24 +8,45 @@ use Carbon\Carbon;
 
 class StaffController extends Controller
 {
-    // Halaman Dashboard Staff
-    public function index()
+    /**
+     * Halaman Dashboard Staff dengan Fitur Search
+     */
+    public function index(Request $request)
     {
-        // 1. Ambil data booking KHUSUS HARI INI
+        // Ambil input search dari URL (jika ada)
+        $search = $request->get('search');
+
+        // 1. Ambil data booking KHUSUS HARI INI (Tanpa filter search agar staff tetap fokus jadwal hari ini)
         $todaysBookings = Booking::whereDate('start_time', Carbon::today())
                             ->with(['user', 'court']) 
                             ->orderBy('start_time', 'asc')
                             ->get();
 
-        // 2. Ambil SEMUA riwayat booking (untuk tabel bawah)
+        // 2. Ambil SEMUA riwayat booking dengan LOGIKA SEARCH
         $allBookings = Booking::with(['user', 'court'])
+                        ->when($search, function($query) use ($search) {
+                            $query->where(function($q) use ($search) {
+                                // Cari berdasarkan Nama User
+                                $q->whereHas('user', function($userQuery) use ($search) {
+                                    $userQuery->where('name', 'like', "%{$search}%");
+                                })
+                                // ATAU Cari berdasarkan Nama Lapangan
+                                ->orWhereHas('court', function($courtQuery) use ($search) {
+                                    $courtQuery->where('name', 'like', "%{$search}%");
+                                })
+                                // ATAU Cari berdasarkan ID Booking
+                                ->orWhere('id', 'like', "%{$search}%");
+                            });
+                        })
                         ->orderBy('created_at', 'desc')
-                        ->get();
+                        ->paginate(15); // Menggunakan pagination agar loading lebih ringan
 
         return view('staff.dashboard', compact('todaysBookings', 'allBookings'));
     }
 
-    // Proses Update Status (Selesai/Terima/Tolak)
+    /**
+     * Update Status Booking (Confirm/Complete/Reject)
+     */
     public function updateStatus(Request $request, $id)
     {
         $booking = Booking::findOrFail($id);
@@ -37,23 +58,22 @@ class StaffController extends Controller
         return redirect()->back()->with('success', 'Status booking berhasil diperbarui!');
     }
 
-    // ============================================================
-    // FIX: Fungsi Input Denda (Menangani Masalah Titik/Rp 100)
-    // ============================================================
+    /**
+     * Input Biaya Tambahan / Denda dengan Proteksi Angka
+     */
     public function addCharge(Request $request, $id)
     {
         $booking = Booking::findOrFail($id);
 
-        // Ambil data input denda
+        // Ambil data input
         $inputCharge = $request->extra_charge;
 
-        // PROTEKSI: Hapus semua karakter selain angka (titik, koma, Rp)
-        // Jika input "100.000", hasilnya jadi "100000"
+        // PROTEKSI: Hapus titik/koma/karakter lain. Contoh "150.000" -> "150000"
         $cleanAmount = preg_replace('/[^0-9]/', '', $inputCharge);
 
-        // Validasi setelah dibersihkan
+        // Validasi
         if (!is_numeric($cleanAmount) && !empty($inputCharge)) {
-            return redirect()->back()->withErrors(['extra_charge' => 'Format denda harus berupa angka.']);
+            return redirect()->back()->withErrors(['extra_charge' => 'Input harus berupa angka.']);
         }
 
         $booking->update([
@@ -61,6 +81,7 @@ class StaffController extends Controller
             'note' => $request->note
         ]);
 
-        return redirect()->back()->with('success', 'Biaya tambahan Rp ' . number_format($cleanAmount, 0, ',', '.') . ' berhasil disimpan!');
+        $formatted = number_format($cleanAmount, 0, ',', '.');
+        return redirect()->back()->with('success', "Biaya tambahan Rp $formatted berhasil disimpan!");
     }
 }

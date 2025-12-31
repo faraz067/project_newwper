@@ -12,14 +12,14 @@
 <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow mb-4">
     <div class="container">
         <a class="navbar-brand fw-bold" href="/"><i class="fas fa-running me-2"></i>GOR Booking</a>
-        <div class="d-flex">
+        <div class="d-flex align-items-center">
             <span class="navbar-text text-white me-3">Halo, {{ Auth::user()->name }}</span>
             <a href="/logout" class="btn btn-danger btn-sm">Logout</a>
         </div>
     </div>
 </nav>
 
-<div class="container">
+<div class="container pb-5">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h3 class="fw-bold text-secondary">📜 Riwayat Booking</h3>
         <a href="{{ route('booking.create') }}" class="btn btn-success fw-bold shadow-sm">
@@ -50,8 +50,8 @@
                                 <th class="ps-4">Lapangan</th>
                                 <th>Jadwal Main</th>
                                 <th>Total Harga</th>
-                                <th>Biaya Tambahan</th> <th>Status</th>
-                                <th class="text-end pe-4" style="min-width: 250px;">Aksi / Upload Bukti</th>
+                                <th>Status</th>
+                                <th class="text-end pe-4">Aksi / Pembayaran</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -61,26 +61,18 @@
                                     <div class="fw-bold">{{ $booking->court->name }}</div>
                                     <small class="text-muted">Dipesan: {{ $booking->created_at->diffForHumans() }}</small>
                                 </td>
+                                
                                 <td>
                                     <div class="fw-bold text-dark">{{ $booking->start_time->format('d M Y') }}</div>
                                     <span class="badge bg-light text-dark border">
                                         {{ $booking->start_time->format('H:i') }} - {{ $booking->end_time->format('H:i') }}
                                     </span>
                                 </td>
-                                <td class="fw-bold text-success">
-                                    Rp {{ number_format($booking->total_price, 0, ',', '.') }}
-                                </td>
                                 
-                                <td>
+                                <td class="fw-bold text-success">
+                                    Rp {{ number_format($booking->total_price + $booking->extra_charge, 0, ',', '.') }}
                                     @if($booking->extra_charge > 0)
-                                        <div class="text-danger fw-bold">
-                                            + Rp {{ number_format($booking->extra_charge, 0, ',', '.') }}
-                                        </div>
-                                        <small class="text-muted fst-italic" style="font-size: 0.75rem;">
-                                            "{{ $booking->note }}"
-                                        </small>
-                                    @else
-                                        <span class="text-muted small">-</span>
+                                        <div class="small text-danger" style="font-size: 0.7rem;">(+ Denda/Charge)</div>
                                     @endif
                                 </td>
 
@@ -88,7 +80,7 @@
                                     @if($booking->status == 'pending')
                                         <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>Menunggu</span>
                                     @elseif($booking->status == 'confirmed')
-                                        <span class="badge bg-primary"><i class="fas fa-check-circle me-1"></i>Diterima</span>
+                                        <span class="badge bg-primary"><i class="fas fa-check-circle me-1"></i>Lunas</span>
                                     @elseif($booking->status == 'completed')
                                         <span class="badge bg-success"><i class="fas fa-flag-checkered me-1"></i>Selesai</span>
                                     @else
@@ -97,36 +89,108 @@
                                 </td>
                                 
                                 <td class="text-end pe-4">
-                                    @if($booking->status == 'pending')
-                                        @if($booking->payment_proof)
-                                            <button class="btn btn-info btn-sm text-white disabled">
-                                                <i class="fas fa-check-circle me-1"></i>Bukti Terkirim
-                                            </button>
-                                            <div class="small text-muted mt-1" style="font-size: 0.75rem;">
-                                                Menunggu Verifikasi Admin
+                                    <button type="button" class="btn btn-primary btn-sm fw-bold shadow-sm" data-bs-toggle="modal" data-bs-target="#paymentModal{{ $booking->id }}">
+                                        <i class="fas fa-file-invoice-dollar me-1"></i> 
+                                        {{ $booking->status == 'pending' ? 'Bayar / Detail' : 'Lihat Invoice' }}
+                                    </button>
+
+                                    <div class="modal fade" id="paymentModal{{ $booking->id }}" tabindex="-1" aria-hidden="true">
+                                        <div class="modal-dialog modal-dialog-centered">
+                                            <div class="modal-content text-start">
+                                                <div class="modal-header {{ $booking->status == 'confirmed' ? 'bg-success' : 'bg-primary' }} text-white">
+                                                    <h5 class="modal-title">
+                                                        <i class="fas fa-receipt me-2"></i>Invoice #{{ $booking->id }}
+                                                    </h5>
+                                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                                </div>
+
+                                                <div class="modal-body">
+                                                    <div class="text-center mb-3">
+                                                        @if($booking->status == 'pending')
+                                                            <div class="badge bg-warning text-dark px-3 py-2 fs-6 rounded-pill mb-2">⏳ Menunggu Pembayaran</div>
+                                                            <p class="text-muted small">Silakan transfer sesuai nominal di bawah ini.</p>
+                                                        @elseif($booking->status == 'confirmed')
+                                                            <div class="badge bg-success px-3 py-2 fs-6 rounded-pill">✅ Pembayaran Diterima</div>
+                                                        @endif
+                                                    </div>
+
+                                                    <div class="card bg-light border-0 mb-3">
+                                                        <div class="card-body p-3">
+                                                            <table class="table table-sm table-borderless mb-0">
+                                                                <tr>
+                                                                    <td class="text-muted">Lapangan</td>
+                                                                    <td class="text-end fw-bold">{{ $booking->court->name }}</td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td class="text-muted">Jadwal</td>
+                                                                    <td class="text-end">{{ $booking->start_time->format('d M Y, H:i') }}</td>
+                                                                </tr>
+                                                                @if($booking->extra_charge > 0)
+                                                                <tr>
+                                                                    <td class="text-danger">Biaya Tambahan</td>
+                                                                    <td class="text-end text-danger fw-bold">+ Rp {{ number_format($booking->extra_charge, 0, ',', '.') }}</td>
+                                                                </tr>
+                                                                <tr class="small text-muted fst-italic">
+                                                                    <td colspan="2" class="text-end">"{{ $booking->note }}"</td>
+                                                                </tr>
+                                                                @endif
+                                                                <tr class="border-top border-secondary mt-2">
+                                                                    <td class="fw-bold text-primary pt-2 fs-5">TOTAL BAYAR</td>
+                                                                    <td class="fw-bold text-primary text-end pt-2 fs-5">
+                                                                        Rp {{ number_format($booking->total_price + $booking->extra_charge, 0, ',', '.') }}
+                                                                    </td>
+                                                                </tr>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+
+                                                    @if($booking->status == 'pending')
+                                                        <div class="alert alert-info border-info d-flex align-items-center mb-3" role="alert">
+                                                            <i class="fas fa-university fa-2x me-3"></i>
+                                                            <div>
+                                                                <small class="text-uppercase text-muted fw-bold">Transfer Bank BCA</small>
+                                                                <div class="d-flex align-items-center gap-2">
+                                                                    <span class="fs-5 fw-bold">123-456-7890</span>
+                                                                    <button class="btn btn-sm btn-outline-secondary py-0" onclick="navigator.clipboard.writeText('1234567890'); alert('No Rekening Disalin!');">
+                                                                        <i class="fas fa-copy"></i>
+                                                                    </button>
+                                                                </div>
+                                                                <small class="text-muted">a.n. Pengelola GOR</small>
+                                                            </div>
+                                                        </div>
+
+                                                        <form action="{{ route('booking.upload', $booking->id) }}" method="POST" enctype="multipart/form-data">
+                                                            @csrf
+                                                            <div class="mb-3">
+                                                                <label class="form-label fw-bold small">Upload Bukti Transfer</label>
+                                                                <input type="file" name="payment_proof" class="form-control" accept="image/*" required>
+                                                                <div class="form-text">Format: JPG, PNG. Maks 2MB.</div>
+                                                            </div>
+                                                            
+                                                            @if($booking->payment_proof)
+                                                                <div class="alert alert-warning py-2 small mb-2">
+                                                                    <i class="fas fa-exclamation-circle"></i> Anda sudah pernah upload bukti. Upload lagi untuk mengganti.
+                                                                </div>
+                                                            @endif
+
+                                                            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">
+                                                                <i class="fas fa-paper-plane me-1"></i> Kirim Bukti Pembayaran
+                                                            </button>
+                                                        </form>
+                                                    @endif
+
+                                                    @if(($booking->status == 'confirmed' || $booking->status == 'completed') && $booking->payment_proof)
+                                                        <div class="text-center mt-2">
+                                                            <a href="{{ asset('storage/' . $booking->payment_proof) }}" target="_blank" class="btn btn-outline-secondary btn-sm">
+                                                                <i class="fas fa-image me-1"></i> Lihat Bukti Bayar Saya
+                                                            </a>
+                                                        </div>
+                                                    @endif
+                                                </div>
                                             </div>
-                                        @else
-                                            <form action="{{ route('booking.upload', $booking->id) }}" method="POST" enctype="multipart/form-data">
-                                                @csrf
-                                                <div class="input-group input-group-sm justify-content-end">
-                                                    <input type="file" name="payment_proof" class="form-control form-control-sm" style="max-width: 200px;" required>
-                                                    <button class="btn btn-primary" type="submit" title="Kirim Bukti">
-                                                        <i class="fas fa-upload"></i>
-                                                    </button>
-                                                </div>
-                                                <div class="small text-danger mt-1" style="font-size: 0.75rem;">
-                                                    *Upload bukti transfer (JPG/PNG)
-                                                </div>
-                                            </form>
-                                        @endif
-                                    @elseif($booking->status == 'confirmed')
-                                        <button class="btn btn-secondary btn-sm" disabled>
-                                            <i class="fas fa-ticket-alt me-1"></i>Tiket Terbit
-                                        </button>
-                                    @else
-                                        <span class="text-muted small">-</span>
-                                    @endif
-                                </td>
+                                        </div>
+                                    </div>
+                                    </td>
                             </tr>
                             @endforeach
                         </tbody>

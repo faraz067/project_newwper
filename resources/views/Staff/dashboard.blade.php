@@ -9,6 +9,9 @@
     <style>
         body { background-color: #f4f6f9; }
         .card-header { background-color: #212529; color: white; }
+        .search-input { background: #343a40; border: 1px solid #495057; color: white; }
+        .search-input:focus { background: #3d444b; color: white; border-color: #0d6efd; box-shadow: none; }
+        .search-input::placeholder { color: #adb5bd; }
     </style>
 </head>
 <body>
@@ -111,37 +114,30 @@
                                             <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#chargeModalToday{{ $booking->id }}">
                                                 <i class="fas fa-coins"></i>
                                             </button>
-
-                                            <div class="modal fade" id="chargeModalToday{{ $booking->id }}" tabindex="-1">
+                                            
+                                            <div class="modal fade" id="chargeModalToday{{ $booking->id }}" tabindex="-1" aria-hidden="true">
                                                 <div class="modal-dialog">
-                                                    <div class="modal-content">
+                                                    <div class="modal-content text-start">
                                                         <div class="modal-header bg-warning">
-                                                            <h5 class="modal-title">Biaya Tambahan ({{ $booking->user->name }})</h5>
+                                                            <h5 class="modal-title fw-bold">Input Biaya Tambahan</h5>
                                                             <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                         </div>
                                                         <form action="{{ route('staff.booking.charge', $booking->id) }}" method="POST">
                                                             @csrf
-                                                            <div class="modal-body text-start">
+                                                            <div class="modal-body">
                                                                 <div class="mb-3">
-                                                                    <label class="fw-bold">Nominal (Rp)</label>
-                                                                    <div class="input-group">
-                                                                        <span class="input-group-text">Rp</span>
-                                                                        <input type="number" 
-                                                                               name="extra_charge" 
-                                                                               class="form-control form-control-lg" 
-                                                                               value="{{ $booking->extra_charge }}" 
-                                                                               placeholder="Contoh: 100000"
-                                                                               oninput="this.value = this.value.replace(/[^0-9]/g, '');">
-                                                                    </div>
-                                                                    <small class="text-danger fst-italic">*Angka saja, dilarang pakai titik.</small>
+                                                                    <label class="form-label fw-bold">Nominal Biaya (Rp)</label>
+                                                                    <input type="number" name="extra_charge" class="form-control" value="{{ $booking->extra_charge }}" placeholder="Contoh: 50000" required>
+                                                                    <small class="text-muted">Masukkan angka saja (tanpa titik/koma)</small>
                                                                 </div>
                                                                 <div class="mb-3">
-                                                                    <label class="fw-bold">Catatan</label>
-                                                                    <textarea name="note" class="form-control" placeholder="Contoh: Denda kerusakan / Beli air">{{ $booking->note }}</textarea>
+                                                                    <label class="form-label fw-bold">Catatan / Alasan</label>
+                                                                    <textarea name="note" class="form-control" rows="3" placeholder="Contoh: Denda kerusakan net / beli air minum">{{ $booking->note }}</textarea>
                                                                 </div>
                                                             </div>
                                                             <div class="modal-footer">
-                                                                <button type="submit" class="btn btn-primary w-100">Simpan Biaya</button>
+                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                                                                <button type="submit" class="btn btn-primary">Simpan Biaya</button>
                                                             </div>
                                                         </form>
                                                     </div>
@@ -164,8 +160,24 @@
 
         <div class="col-12">
             <div class="card shadow-sm">
-                <div class="card-header bg-secondary">
-                    <h5 class="mb-0"><i class="fas fa-history me-2"></i>Semua Riwayat Masuk</h5>
+                <div class="card-header bg-secondary d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 text-white"><i class="fas fa-history me-2"></i>Semua Riwayat Masuk</h5>
+                    
+                    <form action="{{ route('staff.dashboard') }}" method="GET" class="d-flex" style="max-width: 350px;">
+                        <div class="input-group">
+                            <input type="text" name="search" class="form-control form-control-sm search-input" 
+                                   placeholder="Cari nama penyewa / lapangan..." 
+                                   value="{{ request('search') }}">
+                            <button class="btn btn-primary btn-sm" type="submit">
+                                <i class="fas fa-search"></i>
+                            </button>
+                            @if(request('search'))
+                                <a href="{{ route('staff.dashboard') }}" class="btn btn-danger btn-sm" title="Reset Pencarian">
+                                    <i class="fas fa-times"></i>
+                                </a>
+                            @endif
+                        </div>
+                    </form>
                 </div>
                 <div class="card-body">
                     <div class="table-responsive">
@@ -180,7 +192,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach($allBookings as $booking)
+                                @forelse($allBookings as $booking)
                                 <tr>
                                     <td>
                                         {{ $booking->start_time->format('d M Y, H:i') }}
@@ -219,41 +231,33 @@
                                                     @csrf
                                                     <button name="status" value="rejected" class="btn btn-danger btn-sm"><i class="fas fa-times"></i></button>
                                                 </form>
-
                                             @elseif($booking->status == 'confirmed' || $booking->status == 'completed')
                                                 <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#chargeModalHistory{{ $booking->id }}">
                                                     <i class="fas fa-coins"></i> Input Biaya
                                                 </button>
-                                                
-                                                <div class="modal fade" id="chargeModalHistory{{ $booking->id }}" tabindex="-1">
+
+                                                <div class="modal fade" id="chargeModalHistory{{ $booking->id }}" tabindex="-1" aria-hidden="true">
                                                     <div class="modal-dialog">
-                                                        <div class="modal-content">
+                                                        <div class="modal-content text-start">
                                                             <div class="modal-header bg-warning">
-                                                                <h5 class="modal-title">Biaya Tambahan (#{{ $booking->id }})</h5>
+                                                                <h5 class="modal-title fw-bold">Input Biaya Tambahan</h5>
                                                                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                                                             </div>
                                                             <form action="{{ route('staff.booking.charge', $booking->id) }}" method="POST">
                                                                 @csrf
-                                                                <div class="modal-body text-start">
+                                                                <div class="modal-body">
                                                                     <div class="mb-3">
-                                                                        <label class="fw-bold">Nominal (Rp)</label>
-                                                                        <div class="input-group">
-                                                                            <span class="input-group-text">Rp</span>
-                                                                            <input type="number" 
-                                                                                   name="extra_charge" 
-                                                                                   class="form-control form-control-lg" 
-                                                                                   value="{{ $booking->extra_charge }}" 
-                                                                                   oninput="this.value = this.value.replace(/[^0-9]/g, '');">
-                                                                        </div>
-                                                                        <small class="text-danger">*Tanpa titik (Contoh: 100000)</small>
+                                                                        <label class="form-label fw-bold text-dark">Nominal Biaya (Rp)</label>
+                                                                        <input type="number" name="extra_charge" class="form-control" value="{{ $booking->extra_charge }}" required>
                                                                     </div>
                                                                     <div class="mb-3">
-                                                                        <label class="fw-bold">Catatan</label>
-                                                                        <textarea name="note" class="form-control">{{ $booking->note }}</textarea>
+                                                                        <label class="form-label fw-bold text-dark">Catatan</label>
+                                                                        <textarea name="note" class="form-control" rows="3">{{ $booking->note }}</textarea>
                                                                     </div>
                                                                 </div>
                                                                 <div class="modal-footer">
-                                                                    <button type="submit" class="btn btn-primary w-100">Simpan</button>
+                                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                                                                    <button type="submit" class="btn btn-primary">Simpan</button>
                                                                 </div>
                                                             </form>
                                                         </div>
@@ -263,9 +267,17 @@
                                         </div>
                                     </td>
                                 </tr>
-                                @endforeach
+                                @empty
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">Data tidak ditemukan.</td>
+                                </tr>
+                                @endforelse
                             </tbody>
                         </table>
+                    </div>
+
+                    <div class="mt-3">
+                        {{ $allBookings->appends(['search' => request('search')])->links() }}
                     </div>
                 </div>
             </div>
@@ -278,6 +290,5 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
 </body>
 </html>
