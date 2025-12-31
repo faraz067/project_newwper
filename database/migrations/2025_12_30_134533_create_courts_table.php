@@ -11,8 +11,8 @@ return new class extends Migration
         Schema::create('courts', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->string('type'); // <--- TAMBAHKAN INI (Jenis Lapangan)
-            $table->integer('price_per_hour');
+            // Kita gunakan 'price' agar cocok dengan Seeder dan Controller yang sudah dibuat
+            $table->integer('price'); 
             $table->timestamps();
         });
     }

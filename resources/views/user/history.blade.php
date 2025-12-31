@@ -50,7 +50,7 @@
                                 <th class="ps-4">Lapangan</th>
                                 <th>Jadwal Main</th>
                                 <th>Total Harga</th>
-                                <th>Status</th>
+                                <th>Biaya Tambahan</th> <th>Status</th>
                                 <th class="text-end pe-4" style="min-width: 250px;">Aksi / Upload Bukti</th>
                             </tr>
                         </thead>
@@ -70,6 +70,20 @@
                                 <td class="fw-bold text-success">
                                     Rp {{ number_format($booking->total_price, 0, ',', '.') }}
                                 </td>
+                                
+                                <td>
+                                    @if($booking->extra_charge > 0)
+                                        <div class="text-danger fw-bold">
+                                            + Rp {{ number_format($booking->extra_charge, 0, ',', '.') }}
+                                        </div>
+                                        <small class="text-muted fst-italic" style="font-size: 0.75rem;">
+                                            "{{ $booking->note }}"
+                                        </small>
+                                    @else
+                                        <span class="text-muted small">-</span>
+                                    @endif
+                                </td>
+
                                 <td>
                                     @if($booking->status == 'pending')
                                         <span class="badge bg-warning text-dark"><i class="fas fa-clock me-1"></i>Menunggu</span>
@@ -84,7 +98,6 @@
                                 
                                 <td class="text-end pe-4">
                                     @if($booking->status == 'pending')
-                                        
                                         @if($booking->payment_proof)
                                             <button class="btn btn-info btn-sm text-white disabled">
                                                 <i class="fas fa-check-circle me-1"></i>Bukti Terkirim
@@ -106,7 +119,6 @@
                                                 </div>
                                             </form>
                                         @endif
-
                                     @elseif($booking->status == 'confirmed')
                                         <button class="btn btn-secondary btn-sm" disabled>
                                             <i class="fas fa-ticket-alt me-1"></i>Tiket Terbit
@@ -125,5 +137,6 @@
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

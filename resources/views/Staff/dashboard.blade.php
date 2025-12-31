@@ -1,4 +1,4 @@
-\<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
@@ -34,7 +34,7 @@
     
     @if($errors->any())
         <div class="alert alert-danger">
-            Periksa input denda/catatan Anda. Pastikan nominal berupa angka.
+            Periksa input denda/catatan Anda. Pastikan nominal berupa angka tanpa titik.
         </div>
     @endif
 
@@ -78,7 +78,6 @@
                                         <span class="badge bg-secondary">{{ $booking->status }}</span>
                                     @endif
                                 </td>
-                                
                                 <td class="align-middle">
                                     @if($booking->extra_charge > 0)
                                         <span class="text-danger fw-bold">+ Rp {{ number_format($booking->extra_charge, 0, ',', '.') }}</span>
@@ -87,10 +86,8 @@
                                         <span class="text-muted small">-</span>
                                     @endif
                                 </td>
-
                                 <td class="align-middle">
                                     <div class="d-flex gap-1">
-                                        
                                         @if($booking->status == 'confirmed')
                                         <form action="{{ route('staff.booking.update', $booking->id) }}" method="POST">
                                             @csrf
@@ -101,7 +98,7 @@
                                         @endif
 
                                         @if($booking->status == 'confirmed' || $booking->status == 'completed')
-                                            <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#chargeModalToday{{ $booking->id }}" title="Input Biaya">
+                                            <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#chargeModalToday{{ $booking->id }}">
                                                 <i class="fas fa-coins"></i>
                                             </button>
 
@@ -116,30 +113,37 @@
                                                             @csrf
                                                             <div class="modal-body text-start">
                                                                 <div class="mb-3">
-                                                                    <label>Nominal (Rp)</label>
-                                                                    <input type="number" name="extra_charge" class="form-control" value="{{ $booking->extra_charge }}" placeholder="0">
+                                                                    <label class="fw-bold">Nominal (Rp)</label>
+                                                                    <div class="input-group">
+                                                                        <span class="input-group-text">Rp</span>
+                                                                        <input type="number" 
+                                                                               name="extra_charge" 
+                                                                               class="form-control form-control-lg" 
+                                                                               value="{{ $booking->extra_charge }}" 
+                                                                               placeholder="Contoh: 100000"
+                                                                               oninput="this.value = this.value.replace(/[^0-9]/g, '');">
+                                                                    </div>
+                                                                    <small class="text-danger fst-italic">*Angka saja, dilarang pakai titik.</small>
                                                                 </div>
                                                                 <div class="mb-3">
-                                                                    <label>Catatan</label>
-                                                                    <textarea name="note" class="form-control" placeholder="Contoh: Beli Air / Overtime">{{ $booking->note }}</textarea>
+                                                                    <label class="fw-bold">Catatan</label>
+                                                                    <textarea name="note" class="form-control" placeholder="Contoh: Denda kerusakan / Beli air">{{ $booking->note }}</textarea>
                                                                 </div>
                                                             </div>
                                                             <div class="modal-footer">
-                                                                <button type="submit" class="btn btn-primary">Simpan</button>
+                                                                <button type="submit" class="btn btn-primary w-100">Simpan Biaya</button>
                                                             </div>
                                                         </form>
                                                     </div>
                                                 </div>
                                             </div>
-                                            @endif
+                                        @endif
                                     </div>
                                 </td>
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="6" class="text-center py-4 text-muted">
-                                    Tidak ada jadwal main untuk hari ini.
-                                </td>
+                                <td colspan="6" class="text-center py-4 text-muted">Tidak ada jadwal main untuk hari ini.</td>
                             </tr>
                             @endforelse
                         </tbody>
@@ -193,29 +197,20 @@
                                         <div class="d-flex gap-2">
                                             @if($booking->status == 'pending')
                                                 @if($booking->payment_proof)
-                                                    <a href="{{ asset('storage/' . $booking->payment_proof) }}" target="_blank" class="btn btn-info btn-sm text-white" title="Lihat Bukti">
+                                                    <a href="{{ asset('storage/' . $booking->payment_proof) }}" target="_blank" class="btn btn-info btn-sm text-white">
                                                         <i class="fas fa-image"></i>
                                                     </a>
-                                                @else
-                                                    <button class="btn btn-secondary btn-sm" disabled><i class="fas fa-image"></i></button>
                                                 @endif
-
                                                 <form action="{{ route('staff.booking.update', $booking->id) }}" method="POST">
                                                     @csrf
-                                                    <button name="status" value="confirmed" class="btn btn-primary btn-sm" title="Terima">
-                                                        <i class="fas fa-check"></i>
-                                                    </button>
+                                                    <button name="status" value="confirmed" class="btn btn-primary btn-sm"><i class="fas fa-check"></i></button>
                                                 </form>
-
                                                 <form action="{{ route('staff.booking.update', $booking->id) }}" method="POST">
                                                     @csrf
-                                                    <button name="status" value="rejected" class="btn btn-danger btn-sm" title="Tolak">
-                                                        <i class="fas fa-times"></i>
-                                                    </button>
+                                                    <button name="status" value="rejected" class="btn btn-danger btn-sm"><i class="fas fa-times"></i></button>
                                                 </form>
 
                                             @elseif($booking->status == 'confirmed' || $booking->status == 'completed')
-                                                
                                                 <button type="button" class="btn btn-warning btn-sm" data-bs-toggle="modal" data-bs-target="#chargeModalHistory{{ $booking->id }}">
                                                     <i class="fas fa-coins"></i> Input Biaya
                                                 </button>
@@ -231,23 +226,29 @@
                                                                 @csrf
                                                                 <div class="modal-body text-start">
                                                                     <div class="mb-3">
-                                                                        <label>Nominal (Rp)</label>
-                                                                        <input type="number" name="extra_charge" class="form-control" value="{{ $booking->extra_charge }}" placeholder="0">
+                                                                        <label class="fw-bold">Nominal (Rp)</label>
+                                                                        <div class="input-group">
+                                                                            <span class="input-group-text">Rp</span>
+                                                                            <input type="number" 
+                                                                                   name="extra_charge" 
+                                                                                   class="form-control form-control-lg" 
+                                                                                   value="{{ $booking->extra_charge }}" 
+                                                                                   oninput="this.value = this.value.replace(/[^0-9]/g, '');">
+                                                                        </div>
+                                                                        <small class="text-danger">*Tanpa titik (Contoh: 100000)</small>
                                                                     </div>
                                                                     <div class="mb-3">
-                                                                        <label>Catatan</label>
-                                                                        <textarea name="note" class="form-control" placeholder="Contoh: Beli Minum">{{ $booking->note }}</textarea>
+                                                                        <label class="fw-bold">Catatan</label>
+                                                                        <textarea name="note" class="form-control">{{ $booking->note }}</textarea>
                                                                     </div>
                                                                 </div>
                                                                 <div class="modal-footer">
-                                                                    <button type="submit" class="btn btn-primary">Simpan</button>
+                                                                    <button type="submit" class="btn btn-primary w-100">Simpan</button>
                                                                 </div>
                                                             </form>
                                                         </div>
                                                     </div>
                                                 </div>
-                                                @else
-                                                <span class="text-muted">-</span>
                                             @endif
                                         </div>
                                     </td>
