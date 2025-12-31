@@ -3,27 +3,50 @@
 namespace Database\Seeders;
 
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use Illuminate\Support\Facades\Hash;
 
 class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Buat Akun Staff
-        User::create([
-            'name' => 'Pak Petugas',
-            'email' => 'staff@gmail.com',
-            'password' => Hash::make('password123'), // Passwordnya 'password123'
-            'role' => 'staff', // PENTING: Role-nya staff
-        ]);
+        // ADMIN
+        $admin = User::firstOrCreate(
+            ['email' => 'admin@mail.com'],
+            [
+                'name' => 'Admin',
+                'password' => Hash::make('password'),
+            ]
+        );
 
-        // 2. Buat Akun User Biasa (Contoh Penyewa)
-        User::create([
-            'name' => 'Andi Penyewa',
-            'email' => 'andi@gmail.com',
-            'password' => Hash::make('password123'),
-            'role' => 'user',
-        ]);
+        if (!$admin->hasRole('admin')) {
+            $admin->assignRole('admin');
+        }
+
+        // STAFF
+        $staff = User::firstOrCreate(
+            ['email' => 'staff@gmail.com'],
+            [
+                'name' => 'Pak Petugas',
+                'password' => Hash::make('password123'),
+            ]
+        );
+
+        if (!$staff->hasRole('staff')) {
+            $staff->assignRole('staff');
+        }
+
+        // USER / PENYEWA
+        $user = User::firstOrCreate(
+            ['email' => 'andi@gmail.com'],
+            [
+                'name' => 'Andi Penyewa',
+                'password' => Hash::make('password123'),
+            ]
+        );
+
+        if (!$user->hasRole('user')) {
+            $user->assignRole('user');
+        }
     }
 }

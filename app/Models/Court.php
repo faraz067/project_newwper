@@ -9,6 +9,11 @@ class Court extends Model
 {
     use HasFactory;
 
-    // Tambahkan 'type' ke dalam sini
-    protected $fillable = ['name', 'type', 'price_per_hour'];
+    protected $fillable = [
+        'name',
+        'type',
+        'price_per_hour',
+        'status',
+        'photo',
+    ];
 }

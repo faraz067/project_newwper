@@ -1,10 +1,9 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Facades\Auth;
+use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\StaffController;
-use App\Http\Controllers\AuthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -12,81 +11,78 @@ use App\Http\Controllers\AuthController;
 |--------------------------------------------------------------------------
 */
 
-// Halaman Depan
+// =======================
+// PUBLIC
+// =======================
 Route::get('/', function () {
-    return view('welcome');
+    return view('home');
 });
 
-// ====================================================
-// GROUP 1: AUTHENTICATION (Login, Register, Logout)
-// ====================================================
-Route::middleware('guest')->group(function () {
-    // Login
-    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AuthController::class, 'processLogin']);
+Route::get('/lapangan', fn () => view('lapangan'));
+Route::get('/jadwal', fn () => view('jadwal'));
+Route::get('/cara-booking', fn () => view('cara-booking'));
 
-    // Register
-    Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
-    Route::post('/register', [AuthController::class, 'processRegister']);
+
+// =======================
+// DASHBOARD DEFAULT
+// =======================
+Route::get('/dashboard', function () {
+    return view('dashboard');
+})->middleware(['auth', 'verified'])->name('dashboard');
+
+
+// =======================
+// PROFILE (BREEZE)
+// =======================
+Route::middleware('auth')->group(function () {
+
+    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
+    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
+    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
 });
 
-// Logout (Hanya bisa diakses kalau sudah login)
-Route::get('/logout', [AuthController::class, 'logout'])->name('logout')->middleware('auth');
 
+// =======================
+// BOOKING (USER)
+// =======================
+Route::middleware(['auth', 'role:user'])->group(function () {
 
-// ====================================================
-// GROUP 2: Route untuk USER (Penyewa) - Wajib Login
-// ====================================================
-Route::middleware(['auth'])->group(function () {
-    
-    // Halaman Form Booking
     Route::get('/booking', [BookingController::class, 'create'])->name('booking.create');
-    
-    // Proses Simpan Booking ke Database
     Route::post('/booking', [BookingController::class, 'store'])->name('booking.store');
-    
-    // Halaman Riwayat Booking
     Route::get('/riwayat', [BookingController::class, 'history'])->name('booking.history');
 
-    // Route untuk Upload Bukti Bayar
-    Route::post('/booking/{id}/upload', [BookingController::class, 'uploadProof'])->name('booking.upload');
+    Route::post('/booking/{id}/upload', [BookingController::class, 'uploadProof'])
+        ->name('booking.upload');
 });
 
 
-// ====================================================
-// GROUP 3: Route khusus STAFF (Operator) - Wajib Login & Role Staff
-// ====================================================
-Route::middleware(['auth', 'is_staff'])->prefix('staff')->group(function () {
-    
-    // Dashboard Staff (Lihat jadwal & status)
-    Route::get('/dashboard', [StaffController::class, 'index'])->name('staff.dashboard');
-    
-    // Proses Update Status (Terima / Tolak / Selesai)
-    Route::post('/booking/{id}/update', [StaffController::class, 'updateStatus'])->name('staff.booking.update');
+// =======================
+// STAFF
+// =======================
+Route::middleware(['auth', 'role:staff'])->prefix('staff')->group(function () {
 
-    // 👇 TAMBAHAN BARU: Input Denda / Biaya Tambahan
-    Route::post('/booking/{id}/charge', [StaffController::class, 'addCharge'])->name('staff.booking.charge');
+    Route::get('/dashboard', [StaffController::class, 'index'])
+        ->name('staff.dashboard');
+
+    Route::post('/booking/{id}/update', [StaffController::class, 'updateStatus'])
+        ->name('staff.booking.update');
 });
 
 
-// ====================================================
-// GROUP 4: JALAN TIKUS (SHORTCUT UNTUK TESTING)
-// ====================================================
+// =======================
+// ADMIN
+// =======================
+Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
 
-// 1. Link Login Otomatis jadi STAFF
-Route::get('/test-login-staff', function () {
-    // Pastikan User ID 1 ada di database dan role-nya 'staff'
-    if (Auth::loginUsingId(1)) {
-        return redirect()->route('staff.dashboard');
-    }
-    return "User ID 1 tidak ditemukan!";
+    Route::get('/dashboard', function () {
+        return 'INI DASHBOARD ADMIN';
+    })->name('admin.dashboard');
+
 });
 
-// 2. Link Login Otomatis jadi USER
-Route::get('/test-login-user', function () {
-    // Pastikan User ID 2 ada di database
-    if (Auth::loginUsingId(2)) {
-        return redirect()->route('booking.create');
-    }
-    return "User ID 2 tidak ditemukan!";
-});
+
+// =======================
+// AUTH (BREEZE)
+// =======================
+require __DIR__.'/auth.php';

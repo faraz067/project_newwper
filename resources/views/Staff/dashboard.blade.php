@@ -18,7 +18,17 @@
         <a class="navbar-brand fw-bold" href="#"><i class="fas fa-user-shield me-2"></i>Staff Panel</a>
         <div class="d-flex">
             <span class="navbar-text text-white me-3">Halo, Staff</span>
-            <a href="/logout" class="btn btn-outline-danger btn-sm">Logout</a>
+            <!-- Form logout tersembunyi -->
+            <form id="logout-form" action="{{ route('logout') }}" method="POST" style="display: none;">
+                @csrf
+            </form>
+
+            <!-- Tombol logout -->
+            <a href="{{ route('logout') }}"
+            class="btn btn-outline-danger btn-sm"
+            onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                Logout
+            </a>
         </div>
     </div>
 </nav>
