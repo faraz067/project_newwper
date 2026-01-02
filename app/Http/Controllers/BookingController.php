@@ -18,10 +18,12 @@ class BookingController extends Controller
         $date = $request->input('date', date('Y-m-d'));
         $courts = Court::all();
 
-        // Ambil booking yang SUDAH ADA (tampilan list kanan)
+        // Ambil booking yang SUDAH ADA untuk ditampilkan di sidebar
+        // UBAH DISINI: Filter status 'cancelled' agar slot yang batal tidak muncul
         $existingBookings = Booking::whereDate('start_time', $date)
-            ->where('status', '!=', 'rejected') 
-            ->with(['court', 'user']) // Tambahkan user agar nama penyewa muncul
+            ->where('status', '!=', 'cancelled') // <-- PENTING: Jangan tampilkan yang sudah cancel
+            ->where('status', '!=', 'rejected')  // (Opsional) Jaga-jaga kalau ada status rejected
+            ->with(['court', 'user']) 
             ->orderBy('start_time')
             ->get();
 
@@ -29,10 +31,11 @@ class BookingController extends Controller
     }
 
     // ============================================================
-    // 2. PROSES SIMPAN BOOKING (Fix Harga Rp 0)
+    // 2. PROSES SIMPAN BOOKING
     // ============================================================
     public function store(Request $request)
     {
+        // 1. VALIDASI INPUT
         $request->validate([
             'court_id' => 'required|exists:courts,id',
             'date' => 'required|date|after_or_equal:today',
@@ -40,23 +43,27 @@ class BookingController extends Controller
             'end_time' => 'required|after:start_time',
         ]);
 
+        // 2. PARSE TANGGAL & JAM
         $start = Carbon::parse($request->date . ' ' . $request->start_time);
         $end = Carbon::parse($request->date . ' ' . $request->end_time);
 
-        // A. HITUNG DURASI
-        $durationInMinutes = $end->diffInMinutes($start);
-        $durationInHours = $durationInMinutes / 60;
+        // 3. HITUNG DURASI
+        $durationInHours = $start->floatDiffInHours($end);
 
-        // B. AMBIL DATA LAPANGAN & HITUNG HARGA
+        // 4. HITUNG HARGA
         $court = Court::findOrFail($request->court_id);
         
-        // FIX: Menggunakan $court->price (BUKAN price_per_hour)
-        $totalPrice = $court->price * $durationInHours;
+        // Prioritas kolom price_per_hour, fallback ke price
+        $pricePerHour = $court->price_per_hour ?? $court->price ?? 0;
+        
+        $totalPrice = $pricePerHour * $durationInHours;
 
-        // C. CEK BENTROK JADWAL
+        // 5. CEK BENTROK JADWAL
+        // Logic: Cek apakah ada booking lain di jam yang sama, KECUALI yang statusnya cancelled/rejected
         $bentrok = Booking::where('court_id', $request->court_id)
             ->whereDate('start_time', $request->date)
-            ->where('status', '!=', 'rejected')
+            ->where('status', '!=', 'cancelled') // <-- PENTING: Slot yang dicancel BOLEH ditempati lagi
+            ->where('status', '!=', 'rejected')  
             ->where(function ($query) use ($start, $end) {
                 $query->where(function ($q) use ($start, $end) {
                     $q->where('start_time', '<', $end)
@@ -71,14 +78,14 @@ class BookingController extends Controller
                 ->withInput();
         }
 
-        // D. SIMPAN KE DATABASE
+        // 6. SIMPAN KE DATABASE
         Booking::create([
             'user_id' => Auth::id(),
             'court_id' => $request->court_id,
             'start_time' => $start,
             'end_time' => $end,
-            'total_price' => $totalPrice, // Sekarang nilainya benar (tidak 0)
-            'status' => 'pending',
+            'total_price' => abs($totalPrice), 
+            'status' => 'pending', // Default status awal selalu pending
         ]);
 
         return redirect()->route('booking.history')->with('success', 'Booking berhasil! Silakan upload bukti bayar.');
@@ -110,9 +117,14 @@ class BookingController extends Controller
 
         if ($request->hasFile('payment_proof')) {
             $path = $request->file('payment_proof')->store('payment_proofs', 'public');
-            $booking->update(['payment_proof' => $path]);
+            
+            // Update path bukti bayar
+            // Status TIDAK diubah otomatis jadi confirmed, biarkan admin/staff yang cek
+            $booking->update([
+                'payment_proof' => $path
+            ]);
         }
 
-        return redirect()->back()->with('success', 'Bukti berhasil diupload!');
+        return redirect()->back()->with('success', 'Bukti berhasil diupload! Tunggu konfirmasi admin.');
     }
 }

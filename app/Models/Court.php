@@ -9,25 +9,14 @@ class Court extends Model
 {
     use HasFactory;
 
-    /**
-     * fillable diubah agar sesuai dengan migration terbaru.
-     * Kita hapus 'type' dan 'price_per_hour', ganti dengan 'price'.
-     */
+    // Beri tahu Laravel kalau tabelnya bernama 'courts'
+    protected $table = 'courts';
+
     protected $fillable = [
-        'name', 
-        'price_per_hour'
+        'name',
+        'type',             // Kolom baru
+        'price_per_hour',   // Sesuai gambar
+        'status',           // Sesuai gambar (ENUM)
+        'photo',            // Sesuai gambar
     ];
-
-    // Relasi ke Booking (Opsional tapi disarankan agar riwayat lancar)
-    public function bookings()
-    {
-        return $this->hasMany(Booking::class);
-    }
-
-    protected $appends = ['price'];
-
-    public function getPriceAttribute()
-    {
-        return $this->price_per_hour;
-    }
 }

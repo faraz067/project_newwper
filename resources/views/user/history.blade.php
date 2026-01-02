@@ -14,7 +14,10 @@
         <a class="navbar-brand fw-bold" href="/"><i class="fas fa-running me-2"></i>GOR Booking</a>
         <div class="d-flex align-items-center">
             <span class="navbar-text text-white me-3">Halo, {{ Auth::user()->name }}</span>
-            <a href="/logout" class="btn btn-danger btn-sm">Logout</a>
+            <form action="{{ route('logout') }}" method="POST" class="d-inline">
+                @csrf
+                <button type="submit" class="btn btn-danger btn-sm">Logout</button>
+            </form>
         </div>
     </div>
 </nav>

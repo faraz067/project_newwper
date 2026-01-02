@@ -52,7 +52,17 @@ class StaffController extends Controller
         $booking = Booking::findOrFail($id);
         
         if ($request->has('status')) {
-            $booking->update(['status' => $request->status]);
+            // Ambil nilai status dari tombol
+            $status = $request->status;
+
+            // FIX: Jika inputnya 'rejected', ganti paksa jadi 'cancelled'
+            // Ini solusi agar tidak perlu ubah struktur database
+            if ($status == 'rejected') {
+                $status = 'cancelled';
+            }
+
+            // Simpan status yang sudah diperbaiki
+            $booking->update(['status' => $status]);
         }
 
         return redirect()->back()->with('success', 'Status booking berhasil diperbarui!');

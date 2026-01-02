@@ -3,76 +3,41 @@
 namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use App\Models\Booking; 
+use App\Models\Field;   
+use Carbon\Carbon;
 
-class AuthController extends Controller
+class AdminController extends Controller
 {
-    // 1. Tampilkan Form Login
-    public function showLogin()
+    public function index()
     {
-        return view('auth.login');
-    }
+        // 1. PENDAPATAN HARI INI
+        $todaysIncome = Booking::whereDate('created_at', Carbon::today())
+            ->where('status', 'paid') // Pastikan status sesuai database kamu
+            ->sum('total_price');
 
-    // 2. Proses Login
-    public function processLogin(Request $request)
-    {
-        // Validasi input
-        $credentials = $request->validate([
-            'email' => ['required', 'email'],
-            'password' => ['required'],
-        ]);
+        // 2. USER BARU
+        $newUsers = User::whereMonth('created_at', Carbon::now()->month)
+            ->whereYear('created_at', Carbon::now()->year)
+            ->count();
 
-        // Coba Login
-        if (Auth::attempt($credentials)) {
-            $request->session()->regenerate();
+        // 3. BOOKING AKTIF
+        $activeBookings = Booking::whereIn('status', ['pending', 'confirmed', 'paid']) 
+            ->count();
 
-            // Cek Role: Kalau Staff ke Dashboard, Kalau User ke Booking
-            if (Auth::user()->role == 'staff') {
-                return redirect()->intended(route('staff.dashboard'));
-            }
+        // 4. TOTAL SALES
+        $totalSales = Booking::where('status', 'paid')->sum('total_price');
 
-            return redirect()->intended(route('booking.create'));
-        }
+        // 5. DATA LAPANGAN
+        $fields = Field::all();
 
-        // Kalau Gagal
-        return back()->withErrors([
-            'email' => 'Email atau password salah.',
-        ])->onlyInput('email');
-    }
-
-    // 3. Tampilkan Form Register
-    public function showRegister()
-    {
-        return view('auth.register');
-    }
-
-    // 4. Proses Register (Daftar Akun Baru)
-    public function processRegister(Request $request)
-    {
-        $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:6|confirmed', // butuh input password_confirmation
-        ]);
-
-        User::create([
-            'name' => $request->name,
-            'email' => $request->email,
-            'password' => Hash::make($request->password),
-            'role' => 'user', // Default daftar jadi USER biasa
-        ]);
-
-        return redirect()->route('login')->with('success', 'Registrasi berhasil! Silakan login.');
-    }
-
-    // 5. Logout
-    public function logout(Request $request)
-    {
-        Auth::logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
-        return redirect('/login');
+        return view('dashboard', compact(
+            'todaysIncome', 
+            'newUsers', 
+            'activeBookings', 
+            'totalSales', 
+            'fields'
+        ));
     }
 }
