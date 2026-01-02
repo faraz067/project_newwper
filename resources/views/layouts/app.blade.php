@@ -15,17 +15,21 @@
 </head>
 <body class="index-page bg-gray-200">
 
-    {{-- NAVBAR --}}
-    @include('layouts.navbar')
+    {{-- NAVBAR (SATU PINTU) --}}
+    @include('layouts.navbar.main')
 
     {{-- PAGE CONTENT --}}
-    @yield('content')
+    <main class="pt-navbar">
+        @yield('content')
+    </main>
 
     <!-- Core JS Files -->
     <script src="{{ asset('assets/js/core/popper.min.js') }}"></script>
     <script src="{{ asset('assets/js/core/bootstrap.min.js') }}"></script>
     <script src="{{ asset('assets/js/plugins/countup.min.js') }}"></script>
     <script src="{{ asset('assets/js/material-kit.min.js?v=3.1.0') }}"></script>
+
+    @stack('styles')
 
     @stack('scripts')
 </body>

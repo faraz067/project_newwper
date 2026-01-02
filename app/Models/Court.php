@@ -15,12 +15,19 @@ class Court extends Model
      */
     protected $fillable = [
         'name', 
-        'price'
+        'price_per_hour'
     ];
 
     // Relasi ke Booking (Opsional tapi disarankan agar riwayat lancar)
     public function bookings()
     {
         return $this->hasMany(Booking::class);
+    }
+
+    protected $appends = ['price'];
+
+    public function getPriceAttribute()
+    {
+        return $this->price_per_hour;
     }
 }
