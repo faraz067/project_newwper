@@ -8,6 +8,12 @@
         background: linear-gradient(135deg, #0d6efd 0%, #0043a8 100%);
         color: white;
     }
+    /* Style tambahan untuk opsi disabled (Fitur Teman) */
+    option:disabled {
+        background-color: #f8d7da; /* Latar merah muda */
+        color: #842029; /* Teks merah tua */
+        font-weight: bold;
+    }
 </style>
 @endpush
 
@@ -42,7 +48,7 @@
                     <form action="{{ route('booking.create') }}" method="GET" class="mb-3">
                         <label class="small fw-bold text-muted">Pilih Tanggal</label>
                         <div class="input-group">
-                            <input type="date" name="date" class="form-control" value="{{ $date }}">
+                            <input type="date" name="date" class="form-control" value="{{ $date ?? date('Y-m-d') }}">
                             <button class="btn btn-dark">Cek</button>
                         </div>
                     </form>
@@ -50,15 +56,15 @@
                     <hr>
 
                     <h6 class="small fw-bold text-uppercase text-muted mb-3">
-                        Status Lapangan ({{ \Carbon\Carbon::parse($date)->format('d M Y') }})
+                        Status Lapangan ({{ \Carbon\Carbon::parse($date ?? now())->format('d M Y') }})
                     </h6>
 
-                    @if($existingBookings->isEmpty())
+                    @if(isset($existingBookings) && $existingBookings->isEmpty())
                         <div class="text-center text-success py-4">
                             <i class="fas fa-check-circle fa-3x mb-2"></i>
                             <p class="fw-bold mb-0">Semua Lapangan Kosong</p>
                         </div>
-                    @else
+                    @elseif(isset($existingBookings))
                         @foreach($existingBookings as $booked)
                             <div class="d-flex justify-content-between mb-2">
                                 <div>
@@ -86,21 +92,45 @@
 
                     <form action="{{ route('booking.store') }}" method="POST" id="bookingForm">
                         @csrf
-
-                        <input type="hidden" name="date" value="{{ $date }}">
+                        
+                        {{-- Input Hidden Tanggal (Pakai Versi Teman yang lebih aman) --}}
+                        <input type="hidden" name="date" value="{{ $date ?? date('Y-m-d') }}">
 
                         {{-- LAPANGAN --}}
                         <div class="mb-4">
                             <label class="fw-bold small text-uppercase">Pilih Lapangan</label>
+                            
+                            {{-- Hapus onchange="calculatePrice()" karena kita pakai EventListener di script bawah --}}
                             <select name="court_id" id="courtSelect" class="form-select form-select-lg" required>
-                                <option value="" data-price="0">-- Pilih --</option>
+                                <option value="" data-price="0" selected disabled>-- Pilih Lapangan --</option>
+                                
                                 @foreach($courts as $court)
-                                    <option value="{{ $court->id }}" data-price="{{ $court->price_per_hour }}">
-                                        {{-- Ubah $court->price jadi $court->price_per_hour --}}
-                                        {{ $court->name }} (Rp {{ number_format($court->price_per_hour) }}/jam)
-                                    </option>
+                                    @php
+                                        // LOGIC TEMAN: Cek apakah sedang renovasi
+                                        $isRenovation = stripos($court->name, 'Badminton') !== false;
+                                    @endphp
+
+                                    @if($isRenovation)
+                                        {{-- Opsi Mati --}}
+                                        <option value="{{ $court->id }}" disabled>
+                                            🚧 {{ $court->name }} (SEDANG RENOVASI)
+                                        </option>
+                                    @else
+                                        {{-- Opsi Normal --}}
+                                        <option value="{{ $court->id }}" data-price="{{ $court->price_per_hour }}">
+                                            {{ $court->name }} (Rp {{ number_format($court->price_per_hour) }}/jam)
+                                        </option>
+                                    @endif
                                 @endforeach
                             </select>
+
+                            {{-- Pesan Peringatan Kecil (Fitur Teman) --}}
+                            @if($courts->contains(fn($c) => stripos($c->name, 'Badminton') !== false))
+                                <div class="alert alert-warning mt-2 d-flex align-items-center p-2" role="alert">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <small>Mohon maaf, <strong>Lapangan Badminton</strong> sedang dalam perbaikan.</small>
+                                </div>
+                            @endif
                         </div>
 
                         {{-- JAM --}}
@@ -129,7 +159,7 @@
                             </div>
                         </div>
 
-                        <button class="btn btn-success w-100 btn-lg">
+                        <button type="submit" class="btn btn-success w-100 btn-lg">
                             LANJUT KE PEMBAYARAN
                         </button>
 
@@ -146,7 +176,9 @@
 @push('scripts')
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // 1. Ambil Element HTML
+        // KITA PAKAI LOGIC JAVASCRIPT KAMU (KARENA LEBIH RAPI)
+        // TAPI DITAMBAH PENGECEKAN DISABLED DARI TEMAN
+        
         const courtSelect = document.getElementById('courtSelect');
         const startTimeInput = document.getElementById('startTime');
         const endTimeInput = document.getElementById('endTime');
@@ -155,48 +187,44 @@
         const durationDisplay = document.getElementById('durationDisplay');
         const priceDisplay = document.getElementById('priceDisplay');
 
-        // 2. Fungsi Format Rupiah
         function formatRupiah(angka) {
             return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(angka);
         }
 
-        // 3. Fungsi Utama Perhitungan
         function calculateTotal() {
-            // Ambil harga dari atribut data-price di <option>
+            // Ambil opsi yang dipilih
             const selectedOption = courtSelect.options[courtSelect.selectedIndex];
-            const pricePerHour = parseFloat(selectedOption.getAttribute('data-price')) || 0;
+            
+            // CEK: Apakah opsi disabled? (Jaga-jaga kalau user inspect element)
+            if (selectedOption.disabled) {
+                alert("Lapangan ini sedang renovasi!");
+                courtSelect.value = ""; // Reset
+                return;
+            }
 
-            const startVal = startTimeInput.value; // Format "HH:mm"
-            const endVal = endTimeInput.value;     // Format "HH:mm"
+            const pricePerHour = parseFloat(selectedOption.getAttribute('data-price')) || 0;
+            const startVal = startTimeInput.value;
+            const endVal = endTimeInput.value;
 
             // Update tampilan harga per jam
             priceDisplay.textContent = formatRupiah(pricePerHour);
 
-            // Cek apakah jam mulai & selesai sudah diisi
             if (startVal && endVal && pricePerHour > 0) {
-                // Konversi waktu string "14:30" ke object Date dummy
                 const start = new Date(`1970-01-01T${startVal}:00`);
                 const end = new Date(`1970-01-01T${endVal}:00`);
 
-                // Hitung selisih waktu dalam milidetik
                 let diff = end - start;
 
-                // Jika user input jam selesai lebih kecil dari jam mulai (error logic)
                 if (diff <= 0) {
                     totalPriceDisplay.textContent = "Jam Invalid";
                     durationDisplay.textContent = "0";
                     return;
                 }
 
-                // Konversi milidetik ke jam (decimal)
-                // 1000 ms * 60 dtk * 60 mnt
                 const durationInHours = diff / (1000 * 60 * 60);
-
-                // Hitung Total
                 const totalCost = durationInHours * pricePerHour;
 
-                // Tampilkan ke layar
-                durationDisplay.textContent = durationInHours.toFixed(1); // 1 desimal (contoh: 2.5 jam)
+                durationDisplay.textContent = durationInHours.toFixed(1);
                 totalPriceDisplay.textContent = formatRupiah(totalCost);
             } else {
                 totalPriceDisplay.textContent = "Rp 0";
@@ -204,7 +232,7 @@
             }
         }
 
-        // 4. Pasang Event Listener (Jalankan fungsi saat input berubah)
+        // Pasang Event Listener (Lebih bersih daripada onchange di HTML)
         courtSelect.addEventListener('change', calculateTotal);
         startTimeInput.addEventListener('change', calculateTotal);
         endTimeInput.addEventListener('change', calculateTotal);

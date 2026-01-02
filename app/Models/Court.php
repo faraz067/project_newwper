@@ -19,4 +19,20 @@ class Court extends Model
         'status',           // Sesuai gambar (ENUM)
         'photo',            // Sesuai gambar
     ];
+
+    // --- TAMBAHAN DARI TEMAN (PENTING) ---
+    
+    // Ini atribut tambahan biar frontend gampang ambil harga
+    protected $appends = ['price'];
+
+    public function getPriceAttribute()
+    {
+        return $this->price_per_hour;
+    }
+
+    // Relasi ke Booking (PENTING: Tanpa ini dashboard admin error saat load booking)
+    public function bookings()
+    {
+        return $this->hasMany(Booking::class);
+    }
 }
