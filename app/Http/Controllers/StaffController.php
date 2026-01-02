@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Booking; 
-use Carbon\Carbon;      
+use Carbon\Carbon;       
 
 class StaffController extends Controller
 {
@@ -60,8 +60,9 @@ class StaffController extends Controller
 
     /**
      * Input Biaya Tambahan / Denda dengan Proteksi Angka
+     * PERBAIKAN: Nama fungsi diubah jadi 'charge' agar sesuai dengan route web.php
      */
-    public function addCharge(Request $request, $id)
+    public function charge(Request $request, $id)
     {
         $booking = Booking::findOrFail($id);
 
@@ -71,14 +72,15 @@ class StaffController extends Controller
         // PROTEKSI: Hapus titik/koma/karakter lain. Contoh "150.000" -> "150000"
         $cleanAmount = preg_replace('/[^0-9]/', '', $inputCharge);
 
-        // Validasi
+        // Validasi sederhana: pastikan hasil bersihnya adalah angka
         if (!is_numeric($cleanAmount) && !empty($inputCharge)) {
             return redirect()->back()->withErrors(['extra_charge' => 'Input harus berupa angka.']);
         }
 
+        // Update database
         $booking->update([
             'extra_charge' => (int) $cleanAmount,
-            'note' => $request->note
+            'note' => $request->note // Pastikan kolom 'note' ada di database kamu
         ]);
 
         $formatted = number_format($cleanAmount, 0, ',', '.');

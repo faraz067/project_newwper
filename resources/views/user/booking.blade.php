@@ -8,6 +8,12 @@
         background: linear-gradient(135deg, #0d6efd 0%, #0043a8 100%);
         color: white;
     }
+    /* Style tambahan untuk opsi disabled */
+    option:disabled {
+        background-color: #f8d7da; /* Latar merah muda */
+        color: #842029; /* Teks merah tua */
+        font-weight: bold;
+    }
 </style>
 @endpush
 
@@ -29,7 +35,7 @@
                     <form action="{{ route('booking.create') }}" method="GET" class="mb-3">
                         <label class="small fw-bold text-muted">Pilih Tanggal</label>
                         <div class="input-group">
-                            <input type="date" name="date" class="form-control" value="{{ $date }}">
+                            <input type="date" name="date" class="form-control" value="{{ $date ?? date('Y-m-d') }}">
                             <button class="btn btn-dark">Cek</button>
                         </div>
                     </form>
@@ -37,15 +43,15 @@
                     <hr>
 
                     <h6 class="small fw-bold text-uppercase text-muted mb-3">
-                        Status Lapangan ({{ \Carbon\Carbon::parse($date)->format('d M Y') }})
+                        Status Lapangan ({{ \Carbon\Carbon::parse($date ?? now())->format('d M Y') }})
                     </h6>
 
-                    @if($existingBookings->isEmpty())
+                    @if(isset($existingBookings) && $existingBookings->isEmpty())
                         <div class="text-center text-success py-4">
                             <i class="fas fa-check-circle fa-3x mb-2"></i>
                             <p class="fw-bold mb-0">Semua Lapangan Kosong</p>
                         </div>
-                    @else
+                    @elseif(isset($existingBookings))
                         @foreach($existingBookings as $booked)
                             <div class="d-flex justify-content-between mb-2">
                                 <div>
@@ -73,29 +79,56 @@
 
                     <form action="{{ route('booking.store') }}" method="POST" id="bookingForm">
                         @csrf
+                        
+                        {{-- Input Hidden Tanggal (Penting!) --}}
+                        <input type="hidden" name="date" value="{{ $date ?? date('Y-m-d') }}">
 
-                        {{-- LAPANGAN --}}
+                        {{-- LAPANGAN (MODIFIKASI DI SINI) --}}
                         <div class="mb-4">
                             <label class="fw-bold small text-uppercase">Pilih Lapangan</label>
-                            <select name="court_id" id="courtSelect" class="form-select form-select-lg" required>
-                                <option value="" data-price="0">-- Pilih --</option>
+                            
+                            <select name="court_id" id="courtSelect" class="form-select form-select-lg" required onchange="calculatePrice()">
+                                <option value="" data-price="0" selected disabled>-- Pilih Lapangan --</option>
+                                
                                 @foreach($courts as $court)
-                                    <option value="{{ $court->id }}" data-price="{{ $court->price }}">
-                                        {{ $court->name }} (Rp {{ number_format($court->price) }}/jam)
-                                    </option>
+                                    @php
+                                        // Cek apakah nama lapangan mengandung kata "Badminton"
+                                        $isRenovation = stripos($court->name, 'Badminton') !== false;
+                                    @endphp
+
+                                    @if($isRenovation)
+                                        {{-- OPSI MATI (DISABLED) --}}
+                                        <option value="{{ $court->id }}" disabled>
+                                            🚧 {{ $court->name }} (SEDANG RENOVASI - TIDAK BISA DIPILIH)
+                                        </option>
+                                    @else
+                                        {{-- OPSI NORMAL --}}
+                                        {{-- Pastikan data-price menggunakan price_per_hour sesuai kodemu --}}
+                                        <option value="{{ $court->id }}" data-price="{{ $court->price_per_hour }}">
+                                            {{ $court->name }} (Rp {{ number_format($court->price_per_hour) }}/jam)
+                                        </option>
+                                    @endif
                                 @endforeach
                             </select>
+
+                            {{-- Pesan Peringatan Kecil --}}
+                            @if($courts->contains(fn($c) => stripos($c->name, 'Badminton') !== false))
+                                <div class="alert alert-warning mt-2 d-flex align-items-center p-2" role="alert">
+                                    <i class="fas fa-exclamation-triangle me-2"></i>
+                                    <small>Mohon maaf, <strong>Lapangan Badminton</strong> sedang dalam perbaikan.</small>
+                                </div>
+                            @endif
                         </div>
 
                         {{-- JAM --}}
                         <div class="row mb-4">
                             <div class="col">
                                 <label class="small">Jam Mulai</label>
-                                <input type="time" name="start_time" id="startTime" class="form-control" required>
+                                <input type="time" name="start_time" id="startTime" class="form-control" required onchange="calculatePrice()">
                             </div>
                             <div class="col">
                                 <label class="small">Jam Selesai</label>
-                                <input type="time" name="end_time" id="endTime" class="form-control" required>
+                                <input type="time" name="end_time" id="endTime" class="form-control" required onchange="calculatePrice()">
                             </div>
                         </div>
 
@@ -113,7 +146,7 @@
                             </div>
                         </div>
 
-                        <button class="btn btn-success w-100 btn-lg">
+                        <button type="submit" class="btn btn-success w-100 btn-lg">
                             LANJUT KE PEMBAYARAN
                         </button>
 
@@ -124,5 +157,47 @@
 
     </div>
 </div>
+
+{{-- SCRIPT HITUNG HARGA OTOMATIS --}}
+<script>
+    function calculatePrice() {
+        // 1. Ambil elemen
+        const courtSelect = document.getElementById('courtSelect');
+        const startTimeInput = document.getElementById('startTime').value;
+        const endTimeInput = document.getElementById('endTime').value;
+
+        // 2. Ambil Harga dari atribut data-price (Pastikan ada)
+        let pricePerHour = 0;
+        if(courtSelect.selectedIndex > 0) {
+            // Cek apakah opsi yang dipilih valid (tidak disabled)
+            const selectedOption = courtSelect.options[courtSelect.selectedIndex];
+            if (!selectedOption.disabled) {
+                pricePerHour = selectedOption.getAttribute('data-price');
+            }
+        }
+
+        // 3. Hitung Durasi
+        let duration = 0;
+        if (startTimeInput && endTimeInput) {
+            const start = new Date("2000-01-01 " + startTimeInput);
+            const end = new Date("2000-01-01 " + endTimeInput);
+            
+            // Hitung selisih dalam jam
+            const diff = (end - start) / 1000 / 60 / 60;
+            
+            if (diff > 0) {
+                duration = diff;
+            }
+        }
+
+        // 4. Hitung Total
+        const total = duration * pricePerHour;
+
+        // 5. Tampilkan ke Layar
+        document.getElementById('durationDisplay').innerText = duration;
+        document.getElementById('priceDisplay').innerText = "Rp " + new Intl.NumberFormat('id-ID').format(pricePerHour);
+        document.getElementById('totalPriceDisplay').innerText = "Rp " + new Intl.NumberFormat('id-ID').format(total);
+    }
+</script>
 
 @endsection

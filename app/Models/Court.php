@@ -14,9 +14,12 @@ class Court extends Model
      * Kita hapus 'type' dan 'price_per_hour', ganti dengan 'price'.
      */
     protected $fillable = [
-        'name', 
-        'price_per_hour'
-    ];
+    'name',
+    'type',
+    'price_per_hour', // <--- Harus sama dengan database
+    'status',
+    'photo',
+];
 
     // Relasi ke Booking (Opsional tapi disarankan agar riwayat lancar)
     public function bookings()

@@ -2,59 +2,60 @@
 
 namespace Database\Seeders;
 
+use Illuminate\Database\Seeder;
 use App\Models\User;
 use App\Models\Court;
-use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Facades\Schema;
+use Spatie\Permission\Models\Role;
 
 class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        // 1. Bersihkan database agar tidak duplikat
-        Schema::disableForeignKeyConstraints();
-        User::truncate();
-        Court::truncate();
-        Schema::enableForeignKeyConstraints();
+        // 1. BUAT ROLE
+        $roleStaff = Role::firstOrCreate(['name' => 'staff']);
+        $roleUser = Role::firstOrCreate(['name' => 'user']);
 
-        // 2. Buat Akun STAFF (Wajib ID 1 untuk link testing)
-        User::create([
-            'id' => 1,
+        // 2. BUAT USER (STAFF)
+        $staff = User::create([
             'name' => 'Staff Admin',
             'email' => 'staff@gmail.com',
-            'password' => Hash::make('password123'),
-            'role' => 'staff',
+            'password' => bcrypt('password123'),
         ]);
+        $staff->assignRole($roleStaff);
 
-        // 3. Buat Akun USER (Wajib ID 2 untuk link testing)
-        User::create([
-            'id' => 2,
+        // 3. BUAT USER (PENYEWA)
+        $user = User::create([
             'name' => 'Andi Penyewa',
             'email' => 'andi@gmail.com',
-            'password' => Hash::make('password123'),
-            'role' => 'user',
+            'password' => bcrypt('password123'),
         ]);
+        $user->assignRole($roleUser);
 
-        // 4. Buat Data LAPANGAN (Gunakan kolom 'price', hapus kolom 'type')
+        // 4. BUAT DATA LAPANGAN
+        // Perhatikan: kuncinya sekarang 'price_per_hour' (bukan 'price')
+        
         Court::create([
-            'name' => 'Lapangan Basket Indoor',
-            'price' => 70000,
-        ]);
-
-        Court::create([
-            'name' => 'Meja Pingpong 1',
-            'price' => 50000,
-        ]);
-
-        Court::create([
-            'name' => 'Lapangan Padel Premium',
-            'price' => 250000,
+            'name' => 'Lapangan Basket Indoor', 
+            'type' => 'Indoor',
+            'price_per_hour' => 70000, 
         ]);
 
         Court::create([
-            'name' => 'Badminton Hall A',
-            'price' => 30000,
+            'name' => 'Meja Pingpong 1', 
+            'type' => 'Indoor',
+            'price_per_hour' => 50000,
+        ]);
+
+        Court::create([
+            'name' => 'Lapangan Padel Premium', 
+            'type' => 'Outdoor',
+            'price_per_hour' => 250000,
+        ]);
+
+        Court::create([
+            'name' => 'Badminton Hall A', 
+            'type' => 'Indoor',
+            'price_per_hour' => 30000,
         ]);
     }
 }

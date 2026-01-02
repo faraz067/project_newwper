@@ -1,102 +1,140 @@
-<!-- Navbar -->
-<div class="container position-sticky z-index-sticky top-0">
-  <div class="row">
-    <div class="col-12">
+<nav class="navbar navbar-expand-lg navbar-light bg-white shadow-sm fixed-top">
+    <div class="container">
+        {{-- LOGO / BRAND --}}
+        <a class="navbar-brand fw-bold text-primary" href="{{ route('dashboard') }}">
+            <i class="fas fa-table-tennis me-2"></i> Lapangin
+        </a>
 
-      <nav class="navbar navbar-expand-lg blur border-radius-xl shadow p-3 my-3">
+        {{-- TOMBOL MENU HP (Hamburger) --}}
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
 
-        <div class="container-fluid px-0">
+        <div class="collapse navbar-collapse" id="navbarNav">
+            
+            {{-- MENU KIRI --}}
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link {{ request()->is('dashboard') ? 'active fw-bold' : '' }}" href="{{ route('dashboard') }}">
+                        Home
+                    </a>
+                </li>
+                
+                {{-- MENU CARA BOOKING (POP-UP) --}}
+                <li class="nav-item">
+                    <a class="nav-link cursor-pointer" href="#" data-bs-toggle="modal" data-bs-target="#modalCaraBooking">
+                       <i class="material-symbols-rounded opacity-6 me-2 text-md">help</i>
+                       Cara Booking
+                    </a>
+                </li>
 
-          <!-- Brand -->
-          <a class="navbar-brand font-weight-bolder ms-sm-3 text-sm" href="{{ url('/') }}">
-            BookingLapangan
-          </a>
-
-          <!-- Toggle -->
-          <button class="navbar-toggler shadow-none ms-2" type="button"
-            data-bs-toggle="collapse" data-bs-target="#navigation">
-            <span class="navbar-toggler-icon mt-2">
-              <span class="navbar-toggler-bar bar1"></span>
-              <span class="navbar-toggler-bar bar2"></span>
-              <span class="navbar-toggler-bar bar3"></span>
-            </span>
-          </button>
-
-          <!-- Menu -->
-          <div class="collapse navbar-collapse pt-3 pb-2 py-lg-0 w-100" id="navigation">
-            <ul class="navbar-nav navbar-nav-hover ms-auto">
-
-              {{-- MENU UMUM --}}
-              <li class="nav-item mx-2">
-                <a class="nav-link d-flex align-items-center" href="{{ url('/') }}">
-                  <i class="material-symbols-rounded me-2">home</i> Home
-                </a>
-              </li>
-
-              {{-- USER --}}
-              @role('user')
-              <li class="nav-item mx-2">
-                <a class="nav-link d-flex align-items-center" href="{{ route('booking.history') }}">
-                  <i class="material-symbols-rounded me-2">history</i> Riwayat
-                </a>
-              </li>
-              @endrole
-
-              {{-- STAFF --}}
-              @role('staff')
-              <li class="nav-item mx-2">
-                <a class="nav-link d-flex align-items-center" href="/staff/dashboard">
-                  <i class="material-symbols-rounded me-2">badge</i> Staff
-                </a>
-              </li>
-              @endrole
-
-              {{-- ADMIN --}}
-              @role('admin')
-              <li class="nav-item mx-2">
-                <a class="nav-link d-flex align-items-center" href="/admin/dashboard">
-                  <i class="material-symbols-rounded me-2">admin_panel_settings</i> Admin
-                </a>
-              </li>
-              @endrole
-
-              {{-- GUEST --}}
-              @guest
-              <li class="nav-item dropdown mx-2">
-                <a class="nav-link d-flex align-items-center cursor-pointer"
-                   data-bs-toggle="dropdown">
-                  <i class="material-symbols-rounded me-2">account_circle</i> Akun
-                </a>
-                <div class="dropdown-menu dropdown-menu-end p-3 border-radius-xl">
-                  <a href="{{ route('login') }}" class="dropdown-item">Login</a>
-                  <a href="{{ route('register') }}" class="dropdown-item">Daftar</a>
-                </div>
-              </li>
-              @endguest
-
-              {{-- AUTH --}}
-              @auth
-              <li class="nav-item dropdown mx-2">
-                <a class="nav-link d-flex align-items-center cursor-pointer"
-                   data-bs-toggle="dropdown">
-                  <i class="material-symbols-rounded me-2">account_circle</i>
-                  {{ Auth::user()->name }}
-                </a>
-                <div class="dropdown-menu dropdown-menu-end p-3 border-radius-xl">
-                  <form method="POST" action="{{ route('logout') }}">
-                    @csrf
-                    <button class="dropdown-item text-danger">Logout</button>
-                  </form>
-                </div>
-              </li>
-              @endauth
-
+                {{-- MENU TAMBAH BOOKING --}}
+                <li class="nav-item ms-lg-3">
+                    <a class="btn btn-sm btn-primary rounded-pill px-3 mt-1 mt-lg-0" href="{{ route('booking.create') }}">
+                        <i class="fas fa-plus me-1"></i> Booking Baru
+                    </a>
+                </li>
             </ul>
-          </div>
 
+            {{-- MENU KANAN (PROFIL DROPDOWN) --}}
+            <ul class="navbar-nav ms-auto">
+                @auth
+                    <li class="nav-item dropdown">
+                        <a id="navbarDropdown" class="nav-link dropdown-toggle d-flex align-items-center" href="#" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" v-pre>
+                            
+                            {{-- FOTO PROFIL KECIL --}}
+                            @if(Auth::user()->avatar)
+                                <img src="{{ asset('storage/' . Auth::user()->avatar) }}" class="rounded-circle me-2" style="width: 35px; height: 35px; object-fit: cover; border: 2px solid #ddd;">
+                            @else
+                                <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center text-white me-2" style="width: 35px; height: 35px;">
+                                    {{ substr(Auth::user()->name, 0, 1) }}
+                                </div>
+                            @endif
+                            
+                            {{-- NAMA USER --}}
+                            <span class="fw-bold text-dark">{{ Auth::user()->name }}</span>
+                        </a>
+
+                        {{-- ISI DROPDOWN --}}
+                        <div class="dropdown-menu dropdown-menu-end shadow-lg border-0" aria-labelledby="navbarDropdown">
+                            
+                            {{-- EDIT PROFIL --}}
+                            <a class="dropdown-item py-2" href="{{ route('profile.edit') }}">
+                                <i class="fas fa-user-edit me-2 text-primary"></i> Edit Profil
+                            </a>
+
+                            {{-- RIWAYAT --}}
+                            <a class="dropdown-item py-2" href="{{ route('booking.history') }}">
+                                <i class="fas fa-history me-2 text-info"></i> Riwayat Booking
+                            </a>
+
+                            <hr class="dropdown-divider">
+
+                            {{-- LOGOUT (VERSI FINAL - ANTI ERROR 405) --}}
+                            <li>
+                                <form method="POST" action="{{ route('logout') }}">
+                                    @csrf
+                                    <button type="submit" class="dropdown-item py-2 text-danger w-100 text-start border-0 bg-transparent">
+                                        <i class="fas fa-sign-out-alt me-2"></i> Logout
+                                    </button>
+                                </form>
+                            </li>
+
+                        </div>
+                    </li>
+                @else
+                    {{-- JIKA BELUM LOGIN --}}
+                    <li class="nav-item">
+                        <a class="nav-link" href="{{ route('login') }}">Login</a>
+                    </li>
+                @endauth
+            </ul>
         </div>
-      </nav>
+    </div>
+</nav>
 
+<div class="modal fade" id="modalCaraBooking" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-lg">
+    <div class="modal-content border-0 shadow-lg">
+      <div class="modal-header bg-primary text-white">
+        <h5 class="modal-title fw-bold text-white" id="exampleModalLabel">📚 Panduan Cara Booking</h5>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-4">
+        
+        <div class="row">
+            <div class="col-md-4 text-center mb-3">
+                <div class="bg-light p-3 rounded h-100">
+                    <h1 class="text-primary mb-2">1</h1>
+                    <h6 class="fw-bold">Pilih Lapangan</h6>
+                    <p class="small text-muted mb-0">Cari lapangan dan klik 'Booking'.</p>
+                </div>
+            </div>
+            <div class="col-md-4 text-center mb-3">
+                <div class="bg-light p-3 rounded h-100">
+                    <h1 class="text-primary mb-2">2</h1>
+                    <h6 class="fw-bold">Bayar</h6>
+                    <p class="small text-muted mb-0">Tentukan jam dan lakukan pembayaran.</p>
+                </div>
+            </div>
+            <div class="col-md-4 text-center mb-3">
+                <div class="bg-light p-3 rounded h-100">
+                    <h1 class="text-primary mb-2">3</h1>
+                    <h6 class="fw-bold">Mainkan!</h6>
+                    <p class="small text-muted mb-0">Tunjukkan bukti booking ke petugas.</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="alert alert-info mt-3 mb-0 border-0" style="background-color: #e0f7fa; color: #006064;">
+            <i class="fas fa-info-circle me-1"></i> 
+            Jika butuh bantuan, hubungi Admin via WhatsApp.
+        </div>
+
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+      </div>
     </div>
   </div>
 </div>
