@@ -9,9 +9,26 @@ use Illuminate\Support\Facades\Storage;
 class CourtController extends Controller
 {
     // 1. TAMPILKAN SEMUA DATA
-    public function index()
+    public function index(Request $request)
     {
-        $courts = Court::all();
+        // 1. Query Dasar
+        $query = \App\Models\Court::query();
+
+        // 2. Logic SEARCH (Berdasarkan Nama Lapangan)
+        if ($request->filled('search')) {
+            $query->where('name', 'LIKE', '%' . $request->search . '%');
+        }
+
+        // 3. Logic FILTER TIPE (Opsional, sesuaikan dengan database Anda)
+        if ($request->filled('type')) {
+            $query->where('type', $request->type);
+        }
+
+        // 4. Pagination
+        $courts = $query->latest()
+                        ->paginate(10)
+                        ->withQueryString();
+
         return view('admin.courts.index', compact('courts'));
     }
 

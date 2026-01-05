@@ -2,13 +2,14 @@
 
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage; // Tambahan dari teman
+use Illuminate\Support\Facades\Storage; 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\StaffController;
 use App\Http\Controllers\AdminController; 
 use App\Http\Controllers\CourtController;
-use App\Http\Controllers\Auth\LoginController; // Tambahan dari teman
+use App\Http\Controllers\Auth\LoginController; 
+use App\Http\Controllers\Admin\UserController;
 
 // MODEL & HELPER (Penting untuk Dashboard User punya teman)
 use App\Models\Booking; 
@@ -128,10 +129,22 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->group(function () {
     Route::resource('courts', CourtController::class)
         ->names('admin.courts');
 
-    // Manajemen Booking (Approve/Reject)
+    // === MANAJEMEN USER (PENGGUNA) ===
+    Route::resource('users', UserController::class)
+        ->names('admin.users'); 
+
+    // === MANAJEMEN BOOKING ===
+    
+    // 1. List Semua Booking
     Route::get('/bookings', [AdminController::class, 'bookings'])
         ->name('admin.bookings.index');
     
+    // 2. [BARU] Edit Detail & Update Status (Solusi Error RouteNotFound)
+    // Penting: Pastikan di paling atas file sudah ada: use App\Http\Controllers\BookingController;
+    Route::get('/bookings/{id}/edit', [BookingController::class, 'edit'])->name('bookings.edit');
+    Route::put('/bookings/{id}', [BookingController::class, 'update'])->name('bookings.update');
+
+    // 3. Action Cepat (Approve/Reject)
     Route::put('/bookings/{id}/approve', [AdminController::class, 'approveBooking'])
         ->name('admin.bookings.approve');
 

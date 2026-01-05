@@ -207,12 +207,15 @@
                                     <span class="text-xs font-weight-bold">{{ $booking->court->name ?? '-' }}</span>
                                 </td>
                                 <td class="align-middle text-center text-sm">
+                                    {{-- LOGIKA BADGE STATUS --}}
                                     @if($booking->status == 'pending')
                                         <span class="badge badge-sm bg-gradient-warning">Pending</span>
-                                    @elseif($booking->status == 'approved')
-                                        <span class="badge badge-sm bg-gradient-success">Approved</span>
-                                    @elseif($booking->status == 'rejected')
-                                        <span class="badge badge-sm bg-gradient-danger">Rejected</span>
+                                    @elseif($booking->status == 'confirmed')
+                                        <span class="badge badge-sm bg-gradient-primary">Confirmed</span>
+                                    @elseif($booking->status == 'completed')
+                                        <span class="badge badge-sm bg-gradient-success">Completed</span>
+                                    @elseif($booking->status == 'cancelled')
+                                        <span class="badge badge-sm bg-gradient-danger">Cancelled</span>
                                     @else
                                         <span class="badge badge-sm bg-gradient-secondary">{{ $booking->status }}</span>
                                     @endif
@@ -267,69 +270,136 @@
     </div>
 
     @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
-    <script>
-        // --- 1. CONFIG LINE CHART (PENDAPATAN) ---
-        var ctx1 = document.getElementById("chart-income").getContext("2d");
-        var gradientStroke1 = ctx1.createLinearGradient(0, 230, 0, 50);
-        gradientStroke1.addColorStop(1, 'rgba(94, 114, 228, 0.2)');
-        gradientStroke1.addColorStop(0.2, 'rgba(94, 114, 228, 0.0)');
-        gradientStroke1.addColorStop(0, 'rgba(94, 114, 228, 0)');
+      <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> 
+      <script>
+          // --- 1. CONFIG LINE CHART (PENDAPATAN) ---
+          var ctx1 = document.getElementById("chart-income").getContext("2d");
 
-        new Chart(ctx1, {
-            type: "line",
-            data: {
-                labels: ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"],
-                datasets: [{
-                    label: "Pendapatan (Rp)",
-                    tension: 0.4,
-                    borderWidth: 0,
-                    pointRadius: 0,
-                    borderColor: "#5e72e4",
-                    backgroundColor: gradientStroke1,
-                    borderWidth: 3,
-                    fill: true,
-                    data: @json($chartIncome ?? []),
-                    maxBarThickness: 6
-                }],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: false } },
-                interaction: { intersect: false, mode: 'index' },
-                scales: {
-                    y: { grid: { drawBorder: false, display: true, drawOnChartArea: true, drawTicks: false, borderDash: [5, 5] }, ticks: { display: true, padding: 10, color: '#fbfbfb', font: { size: 11, family: "Open Sans", style: 'normal', lineHeight: 2 } } },
-                    x: { grid: { drawBorder: false, display: false, drawOnChartArea: false, drawTicks: false, borderDash: [5, 5] }, ticks: { display: true, color: '#ccc', padding: 20, font: { size: 11, family: "Open Sans", style: 'normal', lineHeight: 2 } } },
-                },
-            },
-        });
+          // Bikin gradient ungu/biru cantik
+          var gradientStroke1 = ctx1.createLinearGradient(0, 230, 0, 50);
+          gradientStroke1.addColorStop(1, 'rgba(94, 114, 228, 0.2)');
+          gradientStroke1.addColorStop(0.2, 'rgba(94, 114, 228, 0.0)');
+          gradientStroke1.addColorStop(0, 'rgba(94, 114, 228, 0)');
 
-        // --- 2. CONFIG PIE CHART (POPULARITAS) ---
-        var ctx2 = document.getElementById("chart-pie").getContext("2d");
-        new Chart(ctx2, {
-            type: "doughnut",
-            data: {
-                labels: @json($pieLabels ?? []),
-                datasets: [{
-                    label: "Jumlah Booking",
-                    weight: 9,
-                    cutout: 60,
-                    tension: 0.9,
-                    pointRadius: 2,
-                    borderWidth: 2,
-                    backgroundColor: ['#5e72e4', '#2dce89', '#f5365c', '#fb6340', '#11cdef'],
-                    data: @json($pieValues ?? []),
-                    fill: false
-                }],
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: { legend: { display: true, position: 'right' } },
-                interaction: { intersect: false, mode: 'index' },
-            },
-        });
-    </script>
-    @endpush
+          new Chart(ctx1, {
+              type: "line",
+              data: {
+                  labels: ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Ags", "Sep", "Okt", "Nov", "Des"],
+                  datasets: [{
+                      label: "Pendapatan (Rp)",
+                      tension: 0.4,
+                      borderWidth: 0,
+                      pointRadius: 0,
+                      borderColor: "#5e72e4",
+                      backgroundColor: gradientStroke1,
+                      borderWidth: 3,
+                      fill: true,
+                      data: @json($chartIncome ?? []),
+                      maxBarThickness: 6
+                  }],
+              },
+              options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                      legend: { display: false }
+                  },
+                  interaction: {
+                      intersect: false,
+                      mode: 'index',
+                  },
+                  scales: {
+                      y: {
+                          grid: {
+                              drawBorder: false,
+                              display: true,
+                              drawOnChartArea: true,
+                              drawTicks: false,
+                              borderDash: [5, 5]
+                          },
+                          ticks: {
+                              display: true,
+                              padding: 10,
+                              color: '#8898aa', // <--- UBAH INI (Dulu putih #fbfbfb, sekarang abu-abu)
+                              font: {
+                                  size: 11,
+                                  family: "Open Sans",
+                                  style: 'normal',
+                                  lineHeight: 2
+                              },
+                          }
+                      },
+                      x: {
+                          grid: {
+                              drawBorder: false,
+                              display: false,
+                              drawOnChartArea: false,
+                              drawTicks: false,
+                              borderDash: [5, 5]
+                          },
+                          ticks: {
+                              display: true,
+                              color: '#8898aa', // <--- UBAH INI JUGA
+                              padding: 20,
+                              font: {
+                                  size: 11,
+                                  family: "Open Sans",
+                                  style: 'normal',
+                                  lineHeight: 2
+                              },
+                          }
+                      },
+                  },
+              },
+          });
+
+          // --- 2. CONFIG PIE CHART (POPULARITAS) ---
+          var ctx2 = document.getElementById("chart-pie").getContext("2d");
+          
+          // Cek dulu datanya kosong atau tidak
+          var pieLabels = @json($pieLabels ?? []);
+          var pieValues = @json($pieValues ?? []);
+
+          // Kalau kosong, kasih data dummy biar chartnya nongol (opsional)
+          if (pieValues.length === 0) {
+              pieLabels = ['Belum ada Data'];
+              pieValues = [1];
+              var pieColors = ['#e9ecef']; // Abu-abu
+          } else {
+              var pieColors = ['#5e72e4', '#2dce89', '#f5365c', '#fb6340', '#11cdef'];
+          }
+
+          new Chart(ctx2, {
+              type: "doughnut",
+              data: {
+                  labels: pieLabels,
+                  datasets: [{
+                      label: "Jumlah Booking",
+                      weight: 9,
+                      cutout: 60,
+                      tension: 0.9,
+                      pointRadius: 2,
+                      borderWidth: 2,
+                      backgroundColor: pieColors,
+                      data: pieValues,
+                      fill: false
+                  }],
+              },
+              options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  plugins: {
+                      legend: {
+                          display: true,
+                          position: 'bottom', // Pindah legend ke bawah biar rapi
+                      }
+                  },
+                  interaction: {
+                      intersect: false,
+                      mode: 'index',
+                  },
+              },
+          });
+      </script>
+      @endpush
 @endsection
