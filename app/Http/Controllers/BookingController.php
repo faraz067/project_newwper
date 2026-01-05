@@ -11,7 +11,7 @@ use Carbon\Carbon;
 class BookingController extends Controller
 {
     // ============================================================
-    // 1. HALAMAN FORM BOOKING
+    // 1. HALAMAN FORM BOOKING (USER)
     // ============================================================
     public function create(Request $request)
     {
@@ -19,10 +19,9 @@ class BookingController extends Controller
         $courts = Court::all();
 
         // Ambil booking yang SUDAH ADA untuk ditampilkan di sidebar
-        // UBAH DISINI: Filter status 'cancelled' agar slot yang batal tidak muncul
         $existingBookings = Booking::whereDate('start_time', $date)
-            ->where('status', '!=', 'cancelled') // <-- PENTING: Jangan tampilkan yang sudah cancel
-            ->where('status', '!=', 'rejected')  // (Opsional) Jaga-jaga kalau ada status rejected
+            ->where('status', '!=', 'cancelled') 
+            ->where('status', '!=', 'rejected') 
             ->with(['court', 'user']) 
             ->orderBy('start_time')
             ->get();
@@ -31,7 +30,7 @@ class BookingController extends Controller
     }
 
     // ============================================================
-    // 2. PROSES SIMPAN BOOKING
+    // 2. PROSES SIMPAN BOOKING (USER)
     // ============================================================
     public function store(Request $request)
     {
@@ -59,10 +58,9 @@ class BookingController extends Controller
         $totalPrice = $pricePerHour * $durationInHours;
 
         // 5. CEK BENTROK JADWAL
-        // Logic: Cek apakah ada booking lain di jam yang sama, KECUALI yang statusnya cancelled/rejected
         $bentrok = Booking::where('court_id', $request->court_id)
             ->whereDate('start_time', $request->date)
-            ->where('status', '!=', 'cancelled') // <-- PENTING: Slot yang dicancel BOLEH ditempati lagi
+            ->where('status', '!=', 'cancelled') 
             ->where('status', '!=', 'rejected')  
             ->where(function ($query) use ($start, $end) {
                 $query->where(function ($q) use ($start, $end) {
@@ -85,14 +83,14 @@ class BookingController extends Controller
             'start_time' => $start,
             'end_time' => $end,
             'total_price' => abs($totalPrice), 
-            'status' => 'pending', // Default status awal selalu pending
+            'status' => 'pending', 
         ]);
 
         return redirect()->route('booking.history')->with('success', 'Booking berhasil! Silakan upload bukti bayar.');
     }
 
     // ============================================================
-    // 3. RIWAYAT BOOKING USER
+    // 3. RIWAYAT BOOKING (USER)
     // ============================================================
     public function history()
     {
@@ -105,7 +103,7 @@ class BookingController extends Controller
     }
 
     // ============================================================
-    // 4. UPLOAD BUKTI PEMBAYARAN
+    // 4. UPLOAD BUKTI PEMBAYARAN (USER)
     // ============================================================
     public function uploadProof(Request $request, $id)
     {
@@ -118,13 +116,48 @@ class BookingController extends Controller
         if ($request->hasFile('payment_proof')) {
             $path = $request->file('payment_proof')->store('payment_proofs', 'public');
             
-            // Update path bukti bayar
-            // Status TIDAK diubah otomatis jadi confirmed, biarkan admin/staff yang cek
             $booking->update([
                 'payment_proof' => $path
             ]);
         }
 
         return redirect()->back()->with('success', 'Bukti berhasil diupload! Tunggu konfirmasi admin.');
+    }
+
+    // ============================================================
+    // 5. MANAJEMEN BOOKING (KHUSUS ADMIN) - BARU DITAMBAHKAN
+    // ============================================================
+
+    /**
+     * Menampilkan Form Edit (Admin)
+     */
+    public function edit($id)
+    {
+        // Ambil data booking + user + court agar tidak error di view
+        $booking = Booking::with(['user', 'court'])->findOrFail($id);
+
+        return view('admin.bookings.edit', compact('booking'));
+    }
+
+    /**
+     * Memproses Update Status (Admin)
+     */
+    public function update(Request $request, $id)
+    {
+        $booking = Booking::findOrFail($id);
+
+        // Validasi input status
+        $request->validate([
+            'status' => 'required|in:pending,approved,rejected,completed,cancelled',
+        ]);
+
+        // Update data status
+        $booking->update([
+            'status' => $request->status,
+        ]);
+
+        // Redirect kembali ke halaman list booking admin
+        return redirect()->route('admin.bookings.index')
+            ->with('success', 'Status booking berhasil diperbarui!');
     }
 }

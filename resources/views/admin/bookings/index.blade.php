@@ -152,7 +152,7 @@
 
                                     {{-- KOLOM 6: AKSI --}}
                                     <td class="align-middle">
-                                        <a href="{{ route('bookings.edit', $booking->id) }}" class="btn btn-link text-dark px-3 mb-0">
+                                        <a href="{{ route('admin.bookings.edit', $booking->id) }}" class="btn btn-link text-dark px-3 mb-0">
                                             <i class="fas fa-pencil-alt text-dark me-2" aria-hidden="true"></i>Detail
                                         </a>
                                     </td>
