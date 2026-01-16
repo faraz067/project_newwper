@@ -51,13 +51,71 @@
             @endif
         </header>
 
-        <main class="flex-grow flex items-center justify-center p-6">
-            <div class="w-full max-w-[1100px] grid lg:grid-cols-2 gap-6 lg:gap-12 items-center">
-                
-                <div class="flex flex-col gap-6 text-center lg:text-left">
-                    <div class="space-y-4">
-                        <h1 class="text-4xl lg:text-6xl font-bold tracking-tight dark:text-white">
-                            Bangun Ide <br>
-                            <span class="text-[#FF2D20]">Menjadi Nyata.</span>
-                        </h1>
-                        <p class="text-lg text-gray-500 dark:text-gray-40
+        <main class="flex-grow flex flex-col items-center justify-center p-6">
+    <div class="w-full max-w-[1100px] grid lg:grid-cols-2 gap-6 lg:gap-12 items-center">
+        <div class="flex flex-col gap-6 text-center lg:text-left">
+            <div class="space-y-4">
+                <h1 class="text-4xl lg:text-6xl font-bold tracking-tight dark:text-white">
+                    Bangun Ide <br>
+                    <span class="text-[#FF2D20]">Menjadi Nyata.</span>
+                </h1>
+                <p class="text-lg text-gray-500 dark:text-gray-400">
+                    Pesan lapangan olahraga favoritmu dengan mudah dan cepat melalui platform kami.
+                </p>
+            </div>
+        </div>
+        
+        <div class="hidden lg:block">
+            <div class="gradient-bg w-full h-[300px] rounded-3xl shadow-xl flex items-center justify-center text-white text-2xl font-bold">
+                Cari Lapangan Terbaik
+            </div>
+        </div>
+    </div>
+
+    <div class="w-full max-w-[1100px] mt-20">
+        <h2 class="text-2xl font-bold mb-8 dark:text-white">Pilih Lapangan Tersedia</h2>
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            @forelse($courts as $court)
+                <div class="glass-card rounded-2xl overflow-hidden flex flex-col transition hover:scale-[1.02] duration-300">
+                    <div class="relative h-48 w-full">
+                        <img src="{{ asset('storage/' . $court->photo) }}" 
+                             alt="{{ $court->name }}" 
+                             class="w-full h-full object-cover">
+                        
+                        <div class="absolute top-4 right-4">
+                            <span class="px-3 py-1 rounded-full text-xs font-bold shadow-sm {{ $court->status == 'tersedia' ? 'bg-green-500 text-white' : 'bg-gray-500 text-white' }}">
+                                {{ strtoupper($court->status) }}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="p-5 flex flex-col flex-grow">
+                        <div class="flex justify-between items-start mb-2">
+                            <h3 class="text-xl font-bold dark:text-white">{{ $court->name }}</h3>
+                            <span class="text-xs font-medium px-2 py-1 bg-gray-100 dark:bg-gray-800 dark:text-gray-300 rounded">
+                                {{ $court->type }}
+                            </span>
+                        </div>
+                        
+                        <p class="text-2xl font-bold text-[#FF2D20] mt-auto">
+                            Rp {{ number_format($court->price_per_hour, 0, ',', '.') }} <span class="text-sm text-gray-500 font-normal">/jam</span>
+                        </p>
+
+                        <a href="#" class="mt-4 w-full py-3 bg-[#FF2D20] text-white text-center rounded-xl font-semibold hover:bg-[#e0261a] transition">
+                            Booking Sekarang
+                        </a>
+                    </div>
+                </div>
+            @empty
+                <div class="col-span-full text-center py-20">
+                    <p class="text-gray-500">Belum ada data lapangan yang tersedia.</p>
+                </div>
+            @endforelse
+        </div>
+
+        <div class="mt-12">
+            {{ $courts->links() }}
+        </div>
+    </div>
+</main>

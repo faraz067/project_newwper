@@ -22,9 +22,14 @@ use Carbon\Carbon;
 // =======================
 // 1. PUBLIC ROUTES
 // =======================
-Route::get('/', function () {
-    return view('home');
-})->name('home');
+// Ganti Route / yang lama dengan ini:
+Route::get('/', [CourtController::class, 'landingPage'])->name('home');
+// Update bagian Public Routes di web.php menjadi seperti ini:
+
+Route::get('/', [CourtController::class, 'landingPage'])->name('home');
+Route::get('/lapangan', [CourtController::class, 'landingPage'])->name('lapangan'); // Menggunakan data yang sama
+Route::get('/jadwal', fn () => view('jadwal'))->name('jadwal');
+Route::get('/cara-booking', fn () => view('cara-booking'))->name('cara-booking');
 
 Route::get('/lapangan', fn () => view('lapangan'))->name('lapangan');
 Route::get('/jadwal', fn () => view('jadwal'))->name('jadwal');

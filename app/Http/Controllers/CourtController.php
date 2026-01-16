@@ -121,4 +121,13 @@ class CourtController extends Controller
 
         return redirect()->route('admin.courts.index')->with('success', 'Lapangan berhasil dihapus!');
     }
+
+    public function landingPage()
+    {
+        // Mengambil data lapangan yang statusnya tersedia saja (optional)
+        $courts = Court::where('status', 'tersedia')->get(); 
+        
+        // Mengarah ke file home.blade.php
+        return view('home', compact('courts'));
+    }
 }
